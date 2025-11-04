@@ -1,0 +1,13 @@
+{
+  "name": "aicaddie-api",
+  "version": "1.0.0",
+  "description": "Backend API for AI Caddie",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "node-fetch": "^2.7.0"
+  }
+}
