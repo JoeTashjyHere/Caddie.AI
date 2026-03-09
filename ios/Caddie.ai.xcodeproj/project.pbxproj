@@ -1,0 +1,1111 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1B2C3D4E5F60789ABCD3001 /* CaddieAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4001 /* CaddieAIApp.swift */; };
+		A1B2C3D4E5F60789ABCD3002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4002 /* ContentView.swift */; };
+		A1B2C3D4E5F60789ABCD3003 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4010 /* HomeView.swift */; };
+		A1B2C3D4E5F60789ABCD3004 /* CourseIntelligenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4011 /* CourseIntelligenceView.swift */; };
+		A1B2C3D4E5F60789ABCD3005 /* CourseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4012 /* CourseSelectionView.swift */; };
+		A1B2C3D4E5F60789ABCD3006 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4013 /* ProfileView.swift */; };
+		A1B2C3D4E5F60789ABCD3007 /* PlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4014 /* PlayView.swift */; };
+		A1B2C3D4E5F60789ABCD3008 /* RecommendationCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4015 /* RecommendationCardView.swift */; };
+		A1B2C3D4E5F60789ABCD3009 /* PhotoLieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4016 /* PhotoLieView.swift */; };
+		A1B2C3D4E5F60789ABCD300A /* PhotoCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4017 /* PhotoCaptureView.swift */; };
+		A1B2C3D4E5F60789ABCD300B /* EditRoundSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4018 /* EditRoundSheet.swift */; };
+		A1B2C3D4E5F60789ABCD300C /* RoundPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4019 /* RoundPlayView.swift */; };
+		A1B2C3D4E5F60789ABCD300D /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD401A /* RoundSummaryView.swift */; };
+		A1B2C3D4E5F60789ABCD300E /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD401B /* StatsView.swift */; };
+		A1B2C3D4E5F60789ABCD300F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD401C /* OnboardingView.swift */; };
+		A1B2C3D4E5F60789ABCD3010 /* ShotRecommendation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4020 /* ShotRecommendation.swift */; };
+		A1B2C3D4E5F60789ABCD3011 /* PlayerProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4021 /* PlayerProfile.swift */; };
+		A1B2C3D4E5F60789ABCD3012 /* ClubDistance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4022 /* ClubDistance.swift */; };
+		A1B2C3D4E5F60789ABCD3013 /* PuttingRead.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4023 /* PuttingRead.swift */; };
+		A1B2C3D4E5F60789ABCD3014 /* ShotContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4024 /* ShotContext.swift */; };
+		A1B2C3D4E5F60789ABCD3015 /* CourseInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4025 /* CourseInsights.swift */; };
+		A1B2C3D4E5F60789ABCD3016 /* CapturedShot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4026 /* CapturedShot.swift */; };
+		A1B2C3D4E5F60789ABCD3017 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4027 /* Course.swift */; };
+		A1B2C3D4E5F60789ABCD3018 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4028 /* Round.swift */; };
+		A1B2C3D4E5F60789ABCD3019 /* OpenAIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4030 /* OpenAIClient.swift */; };
+		A1B2C3D4E5F60789ABCD301A /* RecommenderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4031 /* RecommenderService.swift */; };
+		A1B2C3D4E5F60789ABCD301B /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4032 /* APIService.swift */; };
+		A1B2C3D4E5F60789ABCD301C /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4033 /* Persistence.swift */; };
+		A1B2C3D4E5F60789ABCD301D /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4034 /* WeatherService.swift */; };
+		A1B2C3D4E5F60789ABCD301E /* ElevationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4035 /* ElevationService.swift */; };
+		A1B2C3D4E5F60789ABCD301F /* FeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4036 /* FeedbackService.swift */; };
+		A1B2C3D4E5F60789ABCD3020 /* CourseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4037 /* CourseService.swift */; };
+		A1B2C3D4E5F60789ABCD3021 /* ScoreTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4038 /* ScoreTrackingService.swift */; };
+		A1B2C3D4E5F60789ABCD3022 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4039 /* LocationService.swift */; };
+		A1B2C3D4E5F60789ABCD3023 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4040 /* ImagePicker.swift */; };
+		A1B2C3D4E5F60789ABCD3024 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4041 /* PrimaryButton.swift */; };
+		A1B2C3D4E5F60789ABCD3025 /* GolfTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4042 /* GolfTheme.swift */; };
+		A1B2C3D4E5F60789ABCD3026 /* RoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4050 /* RoundViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3027 /* PuttingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4051 /* PuttingViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3028 /* CourseIntelligenceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4052 /* CourseIntelligenceViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3029 /* PlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4053 /* PlayViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD302A /* ShotInputViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4054 /* ShotInputViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD302B /* CourseViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4055 /* CourseViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD302C /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4056 /* ProfileViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD302D /* AILogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4047 /* AILogger.swift */; };
+		A1B2C3D4E5F60789ABCD302E /* Caddie_aiTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4043 /* Caddie_aiTests.swift */; };
+		A1B2C3D4E5F60789ABCD302F /* Caddie_aiUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4044 /* Caddie_aiUITests.swift */; };
+		A1B2C3D4E5F60789ABCD3030 /* ShotType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4029 /* ShotType.swift */; };
+		A1B2C3D4E5F60789ABCD3031 /* PhotoRecommendationCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4048 /* PhotoRecommendationCardView.swift */; };
+		A1B2C3D4E5F60789ABCD3032 /* GreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4049 /* GreenView.swift */; };
+		A1B2C3D4E5F60789ABCD3033 /* DebugLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4057 /* DebugLogging.swift */; };
+		A1B2C3D4E5F60789ABCD3034 /* ViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4058 /* ViewState.swift */; };
+		A1B2C3D4E5F60789ABCD3035 /* ShotFlowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4059 /* ShotFlowState.swift */; };
+		A1B2C3D4E5F60789ABCD3036 /* CourseMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD405A /* CourseMapView.swift */; };
+		A1B2C3D4E5F60789ABCD3037 /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD405B /* ShimmerView.swift */; };
+		A1B2C3D4E5F60789ABCD3038 /* CourseMapperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404A /* CourseMapperService.swift */; };
+		A1B2C3D4E5F60789ABCD3039 /* HoleLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404B /* HoleLayout.swift */; };
+		A1B2C3D4E5F60789ABCD303A /* HoleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404C /* HoleMapView.swift */; };
+		A1B2C3D4E5F60789ABCD303B /* CaddieSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404D /* CaddieSession.swift */; };
+		A1B2C3D4E5F60789ABCD303C /* CaddieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404E /* CaddieView.swift */; };
+		A1B2C3D4E5F60789ABCD303D /* FullShotCaddieFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD404F /* FullShotCaddieFlow.swift */; };
+		A1B2C3D4E5F60789ABCD303E /* CaddieGreenReaderWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD405F /* CaddieGreenReaderWrapper.swift */; };
+		A1B2C3D4E5F60789ABCD303F /* CaddieViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4060 /* CaddieViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3040 /* FullShotCaddieViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4061 /* FullShotCaddieViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3041 /* CaddieFlowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4062 /* CaddieFlowState.swift */; };
+		A1B2C3D4E5F60789ABCD3042 /* ShotPhotoAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4063 /* ShotPhotoAnalysis.swift */; };
+		A1B2C3D4E5F60789ABCD3043 /* CaddieContextDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4064 /* CaddieContextDraft.swift */; };
+		A1B2C3D4E5F60789ABCD3044 /* CaddieUnifiedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4065 /* CaddieUnifiedViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3045 /* CaddieHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4066 /* CaddieHomeView.swift */; };
+		A1B2C3D4E5F60789ABCD3046 /* ContextBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4067 /* ContextBannerView.swift */; };
+		A1B2C3D4E5F60789ABCD3047 /* PrimaryCaddieCTAButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4068 /* PrimaryCaddieCTAButton.swift */; };
+		A1B2C3D4E5F60789ABCD3048 /* QuickActionsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4069 /* QuickActionsRow.swift */; };
+		A1B2C3D4E5F60789ABCD3049 /* CaddieCameraCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406A /* CaddieCameraCaptureView.swift */; };
+		A1B2C3D4E5F60789ABCD304A /* ContextConfirmSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406B /* ContextConfirmSheet.swift */; };
+		A1B2C3D4E5F60789ABCD304B /* PuttingReadCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406C /* PuttingReadCardView.swift */; };
+		A1B2C3D4E5F60789ABCD304C /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406D /* HistoryView.swift */; };
+		A1B2C3D4E5F60789ABCD304D /* HistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406E /* HistoryItem.swift */; };
+		A1B2C3D4E5F60789ABCD304E /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD406F /* HistoryStore.swift */; };
+		A1B2C3D4E5F60789ABCD304F /* HistoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4070 /* HistoryDetailView.swift */; };
+		A1B2C3D4E5F60789ABCD3050 /* CaddiePromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4071 /* CaddiePromptBuilder.swift */; };
+		A1B2C3D4E5F60789ABCD3051 /* GreenRiskPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4072 /* GreenRiskPreference.swift */; };
+		A1B2C3D4E5F60789ABCD3052 /* AIContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4073 /* AIContextBuilder.swift */; };
+		A1B2C3D4E5F60789ABCD3053 /* LieClassificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4075 /* LieClassificationService.swift */; };
+		A1B2C3D4E5F60789ABCD3054 /* CaddieShotViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4076 /* CaddieShotViewModel.swift */; };
+		A1B2C3D4E5F60789ABCD3055 /* CaddieRecommendationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4077 /* CaddieRecommendationOverlay.swift */; };
+		A1B2C3D4E5F60789ABCD3056 /* CaddieShotViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4078 /* CaddieShotViewModelTests.swift */; };
+		E45591852F5C722500B8ACCF /* ShotRecommendationScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45591842F5C722400B8ACCF /* ShotRecommendationScenarioTests.swift */; };
+		E4B7C5F42F041F3F00A8D62A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E4B7C5F32F041F3F00A8D62A /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1B2C3D4E5F60789ABCD5001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1B2C3D4E5F60789ABCD0001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D4E5F60789ABCD1001;
+			remoteInfo = Caddie.ai;
+		};
+		A1B2C3D4E5F60789ABCD5002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1B2C3D4E5F60789ABCD0001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D4E5F60789ABCD1001;
+			remoteInfo = Caddie.ai;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A1B2C3D4E5F60789ABCD4001 /* CaddieAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieAIApp.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4003 /* Caddie_ai.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Caddie_ai.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4004 /* Caddie.ai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Caddie.ai.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60789ABCD4005 /* Caddie.aiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Caddie.aiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60789ABCD4006 /* Caddie.aiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Caddie.aiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60789ABCD4010 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4011 /* CourseIntelligenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseIntelligenceView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4012 /* CourseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseSelectionView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4013 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4014 /* PlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4015 /* RecommendationCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCardView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4016 /* PhotoLieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLieView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4017 /* PhotoCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCaptureView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4018 /* EditRoundSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRoundSheet.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4019 /* RoundPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundPlayView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD401A /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD401B /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD401C /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4020 /* ShotRecommendation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotRecommendation.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4021 /* PlayerProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfile.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4022 /* ClubDistance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubDistance.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4023 /* PuttingRead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuttingRead.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4024 /* ShotContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotContext.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4025 /* CourseInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseInsights.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4026 /* CapturedShot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturedShot.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4027 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4028 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4029 /* ShotType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotType.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4030 /* OpenAIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIClient.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4031 /* RecommenderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommenderService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4032 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4033 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4034 /* WeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4035 /* ElevationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4036 /* FeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4037 /* CourseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4038 /* ScoreTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreTrackingService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4039 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4040 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4041 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4042 /* GolfTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTheme.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4043 /* Caddie_aiTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie_aiTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4044 /* Caddie_aiUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie_aiUITests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4047 /* AILogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AILogger.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4048 /* PhotoRecommendationCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoRecommendationCardView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4049 /* GreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreenView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404A /* CourseMapperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseMapperService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404B /* HoleLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleLayout.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404C /* HoleMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleMapView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404D /* CaddieSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieSession.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404E /* CaddieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD404F /* FullShotCaddieFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullShotCaddieFlow.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4050 /* RoundViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4051 /* PuttingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuttingViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4052 /* CourseIntelligenceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseIntelligenceViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4053 /* PlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4054 /* ShotInputViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotInputViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4055 /* CourseViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4056 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4057 /* DebugLogging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogging.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4058 /* ViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewState.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4059 /* ShotFlowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotFlowState.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD405A /* CourseMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseMapView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD405B /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD405F /* CaddieGreenReaderWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieGreenReaderWrapper.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4060 /* CaddieViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4061 /* FullShotCaddieViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullShotCaddieViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4062 /* CaddieFlowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieFlowState.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4063 /* ShotPhotoAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotPhotoAnalysis.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4064 /* CaddieContextDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieContextDraft.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4065 /* CaddieUnifiedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieUnifiedViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4066 /* CaddieHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieHomeView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4067 /* ContextBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextBannerView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4068 /* PrimaryCaddieCTAButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryCaddieCTAButton.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4069 /* QuickActionsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsRow.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406A /* CaddieCameraCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieCameraCaptureView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406B /* ContextConfirmSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextConfirmSheet.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406C /* PuttingReadCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PuttingReadCardView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406D /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406E /* HistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItem.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD406F /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4070 /* HistoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryDetailView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4071 /* CaddiePromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddiePromptBuilder.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4072 /* GreenRiskPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreenRiskPreference.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4073 /* AIContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIContextBuilder.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4075 /* LieClassificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LieClassificationService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4076 /* CaddieShotViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieShotViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4077 /* CaddieRecommendationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieRecommendationOverlay.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60789ABCD4078 /* CaddieShotViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaddieShotViewModelTests.swift; sourceTree = "<group>"; };
+		E45591842F5C722400B8ACCF /* ShotRecommendationScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotRecommendationScenarioTests.swift; sourceTree = "<group>"; };
+		E4B7C5F32F041F3F00A8D62A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1B2C3D4E5F60789ABCD2002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1B2C3D4E5F60789ABCD0002 = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD0003,
+				A1B2C3D4E5F60789ABCD0004 /* Caddie.aiTests */,
+				A1B2C3D4E5F60789ABCD0005 /* Caddie.aiUITests */,
+				A1B2C3D4E5F60789ABCD0006 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0003 = {
+			isa = PBXGroup;
+			children = (
+				E4B7C5F32F041F3F00A8D62A /* Assets.xcassets */,
+				A1B2C3D4E5F60789ABCD4001 /* CaddieAIApp.swift */,
+				A1B2C3D4E5F60789ABCD4002 /* ContentView.swift */,
+				A1B2C3D4E5F60789ABCD4003 /* Caddie_ai.entitlements */,
+				A1B2C3D4E5F60789ABCD0007 /* Features */,
+				A1B2C3D4E5F60789ABCD0008 /* Models */,
+				A1B2C3D4E5F60789ABCD0009 /* Services */,
+				A1B2C3D4E5F60789ABCD000A /* SharedUI */,
+				A1B2C3D4E5F60789ABCD000B /* ViewModels */,
+			);
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0004 /* Caddie.aiTests */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4043 /* Caddie_aiTests.swift */,
+				A1B2C3D4E5F60789ABCD4078 /* CaddieShotViewModelTests.swift */,
+				E45591842F5C722400B8ACCF /* ShotRecommendationScenarioTests.swift */,
+			);
+			path = Caddie.aiTests;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0005 /* Caddie.aiUITests */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4044 /* Caddie_aiUITests.swift */,
+			);
+			path = Caddie.aiUITests;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0006 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4004 /* Caddie.ai.app */,
+				A1B2C3D4E5F60789ABCD4005 /* Caddie.aiTests.xctest */,
+				A1B2C3D4E5F60789ABCD4006 /* Caddie.aiUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0007 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD0010 /* Home */,
+				A1B2C3D4E5F60789ABCD0011 /* Intelligence */,
+				A1B2C3D4E5F60789ABCD0012 /* StartRound */,
+				A1B2C3D4E5F60789ABCD0013 /* Profile */,
+				A1B2C3D4E5F60789ABCD0014 /* Play */,
+				A1B2C3D4E5F60789ABCD0015 /* Photo */,
+				A1B2C3D4E5F60789ABCD0016 /* Round */,
+				A1B2C3D4E5F60789ABCD0017 /* Stats */,
+				A1B2C3D4E5F60789ABCD0018 /* Onboarding */,
+				A1B2C3D4E5F60789ABCD0019 /* Putting */,
+				A1B2C3D4E5F60789ABCD001A /* Caddie */,
+				A1B2C3D4E5F60789ABCD001B /* History */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0008 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4020 /* ShotRecommendation.swift */,
+				A1B2C3D4E5F60789ABCD4021 /* PlayerProfile.swift */,
+				A1B2C3D4E5F60789ABCD4022 /* ClubDistance.swift */,
+				A1B2C3D4E5F60789ABCD4023 /* PuttingRead.swift */,
+				A1B2C3D4E5F60789ABCD4024 /* ShotContext.swift */,
+				A1B2C3D4E5F60789ABCD4025 /* CourseInsights.swift */,
+				A1B2C3D4E5F60789ABCD4026 /* CapturedShot.swift */,
+				A1B2C3D4E5F60789ABCD4027 /* Course.swift */,
+				A1B2C3D4E5F60789ABCD4029 /* ShotType.swift */,
+				A1B2C3D4E5F60789ABCD4072 /* GreenRiskPreference.swift */,
+				A1B2C3D4E5F60789ABCD4028 /* Round.swift */,
+				A1B2C3D4E5F60789ABCD404B /* HoleLayout.swift */,
+				A1B2C3D4E5F60789ABCD404D /* CaddieSession.swift */,
+				A1B2C3D4E5F60789ABCD4062 /* CaddieFlowState.swift */,
+				A1B2C3D4E5F60789ABCD4063 /* ShotPhotoAnalysis.swift */,
+				A1B2C3D4E5F60789ABCD4064 /* CaddieContextDraft.swift */,
+				A1B2C3D4E5F60789ABCD406E /* HistoryItem.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0009 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4047 /* AILogger.swift */,
+				A1B2C3D4E5F60789ABCD4057 /* DebugLogging.swift */,
+				A1B2C3D4E5F60789ABCD4032 /* APIService.swift */,
+				A1B2C3D4E5F60789ABCD4037 /* CourseService.swift */,
+				A1B2C3D4E5F60789ABCD404A /* CourseMapperService.swift */,
+				A1B2C3D4E5F60789ABCD4036 /* FeedbackService.swift */,
+				A1B2C3D4E5F60789ABCD4031 /* RecommenderService.swift */,
+				A1B2C3D4E5F60789ABCD4030 /* OpenAIClient.swift */,
+				A1B2C3D4E5F60789ABCD4033 /* Persistence.swift */,
+				A1B2C3D4E5F60789ABCD4039 /* LocationService.swift */,
+				A1B2C3D4E5F60789ABCD4034 /* WeatherService.swift */,
+				A1B2C3D4E5F60789ABCD4035 /* ElevationService.swift */,
+				A1B2C3D4E5F60789ABCD4038 /* ScoreTrackingService.swift */,
+				A1B2C3D4E5F60789ABCD406F /* HistoryStore.swift */,
+				A1B2C3D4E5F60789ABCD4071 /* CaddiePromptBuilder.swift */,
+				A1B2C3D4E5F60789ABCD4073 /* AIContextBuilder.swift */,
+				A1B2C3D4E5F60789ABCD4075 /* LieClassificationService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD000A /* SharedUI */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4058 /* ViewState.swift */,
+				A1B2C3D4E5F60789ABCD4059 /* ShotFlowState.swift */,
+				A1B2C3D4E5F60789ABCD405A /* CourseMapView.swift */,
+				A1B2C3D4E5F60789ABCD405B /* ShimmerView.swift */,
+				A1B2C3D4E5F60789ABCD4040 /* ImagePicker.swift */,
+				A1B2C3D4E5F60789ABCD4041 /* PrimaryButton.swift */,
+				A1B2C3D4E5F60789ABCD4042 /* GolfTheme.swift */,
+			);
+			path = SharedUI;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD000B /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4050 /* RoundViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4051 /* PuttingViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4052 /* CourseIntelligenceViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4053 /* PlayViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4054 /* ShotInputViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4055 /* CourseViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4056 /* ProfileViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4060 /* CaddieViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4061 /* FullShotCaddieViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4065 /* CaddieUnifiedViewModel.swift */,
+				A1B2C3D4E5F60789ABCD4076 /* CaddieShotViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0010 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4010 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0011 /* Intelligence */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4011 /* CourseIntelligenceView.swift */,
+			);
+			path = Intelligence;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0012 /* StartRound */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4012 /* CourseSelectionView.swift */,
+			);
+			path = StartRound;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0013 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4013 /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0014 /* Play */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4014 /* PlayView.swift */,
+				A1B2C3D4E5F60789ABCD4015 /* RecommendationCardView.swift */,
+			);
+			path = Play;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0015 /* Photo */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4016 /* PhotoLieView.swift */,
+				A1B2C3D4E5F60789ABCD4017 /* PhotoCaptureView.swift */,
+				A1B2C3D4E5F60789ABCD4048 /* PhotoRecommendationCardView.swift */,
+			);
+			path = Photo;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0016 /* Round */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4018 /* EditRoundSheet.swift */,
+				A1B2C3D4E5F60789ABCD404C /* HoleMapView.swift */,
+				A1B2C3D4E5F60789ABCD4019 /* RoundPlayView.swift */,
+				A1B2C3D4E5F60789ABCD401A /* RoundSummaryView.swift */,
+			);
+			path = Round;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0017 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD401B /* StatsView.swift */,
+			);
+			path = Stats;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0018 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD401C /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD0019 /* Putting */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD4049 /* GreenView.swift */,
+			);
+			path = Putting;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD001A /* Caddie */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD404E /* CaddieView.swift */,
+				A1B2C3D4E5F60789ABCD404F /* FullShotCaddieFlow.swift */,
+				A1B2C3D4E5F60789ABCD405F /* CaddieGreenReaderWrapper.swift */,
+				A1B2C3D4E5F60789ABCD4066 /* CaddieHomeView.swift */,
+				A1B2C3D4E5F60789ABCD4067 /* ContextBannerView.swift */,
+				A1B2C3D4E5F60789ABCD4068 /* PrimaryCaddieCTAButton.swift */,
+				A1B2C3D4E5F60789ABCD4069 /* QuickActionsRow.swift */,
+				A1B2C3D4E5F60789ABCD406A /* CaddieCameraCaptureView.swift */,
+				A1B2C3D4E5F60789ABCD406B /* ContextConfirmSheet.swift */,
+				A1B2C3D4E5F60789ABCD406C /* PuttingReadCardView.swift */,
+				A1B2C3D4E5F60789ABCD4077 /* CaddieRecommendationOverlay.swift */,
+			);
+			path = Caddie;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60789ABCD001B /* History */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60789ABCD406D /* HistoryView.swift */,
+				A1B2C3D4E5F60789ABCD4070 /* HistoryDetailView.swift */,
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1B2C3D4E5F60789ABCD1001 /* Caddie.ai */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F60789ABCD8002 /* Build configuration list for PBXNativeTarget "Caddie.ai" */;
+			buildPhases = (
+				A1B2C3D4E5F60789ABCD2001 /* Sources */,
+				A1B2C3D4E5F60789ABCD2002 /* Frameworks */,
+				A1B2C3D4E5F60789ABCD2003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Caddie.ai;
+			packageProductDependencies = (
+			);
+			productName = Caddie.ai;
+			productReference = A1B2C3D4E5F60789ABCD4004 /* Caddie.ai.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A1B2C3D4E5F60789ABCD1002 /* Caddie.aiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F60789ABCD8003 /* Build configuration list for PBXNativeTarget "Caddie.aiTests" */;
+			buildPhases = (
+				A1B2C3D4E5F60789ABCD2004 /* Sources */,
+				A1B2C3D4E5F60789ABCD2005 /* Frameworks */,
+				A1B2C3D4E5F60789ABCD2006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1B2C3D4E5F60789ABCD6001 /* PBXTargetDependency */,
+			);
+			name = Caddie.aiTests;
+			packageProductDependencies = (
+			);
+			productName = Caddie.aiTests;
+			productReference = A1B2C3D4E5F60789ABCD4005 /* Caddie.aiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A1B2C3D4E5F60789ABCD1003 /* Caddie.aiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F60789ABCD8004 /* Build configuration list for PBXNativeTarget "Caddie.aiUITests" */;
+			buildPhases = (
+				A1B2C3D4E5F60789ABCD2007 /* Sources */,
+				A1B2C3D4E5F60789ABCD2008 /* Frameworks */,
+				A1B2C3D4E5F60789ABCD2009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1B2C3D4E5F60789ABCD6002 /* PBXTargetDependency */,
+			);
+			name = Caddie.aiUITests;
+			packageProductDependencies = (
+			);
+			productName = Caddie.aiUITests;
+			productReference = A1B2C3D4E5F60789ABCD4006 /* Caddie.aiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1B2C3D4E5F60789ABCD0001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					A1B2C3D4E5F60789ABCD1001 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					A1B2C3D4E5F60789ABCD1002 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = A1B2C3D4E5F60789ABCD1001;
+					};
+					A1B2C3D4E5F60789ABCD1003 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = A1B2C3D4E5F60789ABCD1001;
+					};
+				};
+			};
+			buildConfigurationList = A1B2C3D4E5F60789ABCD8001 /* Build configuration list for PBXProject "Caddie.ai" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1B2C3D4E5F60789ABCD0002;
+			productRefGroup = A1B2C3D4E5F60789ABCD0006 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1B2C3D4E5F60789ABCD1001 /* Caddie.ai */,
+				A1B2C3D4E5F60789ABCD1002 /* Caddie.aiTests */,
+				A1B2C3D4E5F60789ABCD1003 /* Caddie.aiUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1B2C3D4E5F60789ABCD2003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4B7C5F42F041F3F00A8D62A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1B2C3D4E5F60789ABCD2001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F60789ABCD3001 /* CaddieAIApp.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3002 /* ContentView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3003 /* HomeView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3004 /* CourseIntelligenceView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3005 /* CourseSelectionView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3006 /* ProfileView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3007 /* PlayView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3008 /* RecommendationCardView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3009 /* PhotoLieView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300A /* PhotoCaptureView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3031 /* PhotoRecommendationCardView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300B /* EditRoundSheet.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303A /* HoleMapView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300C /* RoundPlayView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300D /* RoundSummaryView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300E /* StatsView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD300F /* OnboardingView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3010 /* ShotRecommendation.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3011 /* PlayerProfile.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3012 /* ClubDistance.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3013 /* PuttingRead.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3014 /* ShotContext.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3015 /* CourseInsights.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3016 /* CapturedShot.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3017 /* Course.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3018 /* Round.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3019 /* OpenAIClient.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301A /* RecommenderService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301B /* APIService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301C /* Persistence.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301D /* WeatherService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301E /* ElevationService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD301F /* FeedbackService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3020 /* CourseService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3038 /* CourseMapperService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3039 /* HoleLayout.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3021 /* ScoreTrackingService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD302D /* AILogger.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3033 /* DebugLogging.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3022 /* LocationService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3034 /* ViewState.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3035 /* ShotFlowState.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3036 /* CourseMapView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3037 /* ShimmerView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3023 /* ImagePicker.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3024 /* PrimaryButton.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3025 /* GolfTheme.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3026 /* RoundViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3027 /* PuttingViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3028 /* CourseIntelligenceViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3029 /* PlayViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD302A /* ShotInputViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD302B /* CourseViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD302C /* ProfileViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3030 /* ShotType.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3051 /* GreenRiskPreference.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3052 /* AIContextBuilder.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3032 /* GreenView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303B /* CaddieSession.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303C /* CaddieView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303D /* FullShotCaddieFlow.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303E /* CaddieGreenReaderWrapper.swift in Sources */,
+				A1B2C3D4E5F60789ABCD303F /* CaddieViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3040 /* FullShotCaddieViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3041 /* CaddieFlowState.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3042 /* ShotPhotoAnalysis.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3043 /* CaddieContextDraft.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3044 /* CaddieUnifiedViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3045 /* CaddieHomeView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3046 /* ContextBannerView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3047 /* PrimaryCaddieCTAButton.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3048 /* QuickActionsRow.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3049 /* CaddieCameraCaptureView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304A /* ContextConfirmSheet.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304B /* PuttingReadCardView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304C /* HistoryView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304D /* HistoryItem.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304E /* HistoryStore.swift in Sources */,
+				A1B2C3D4E5F60789ABCD304F /* HistoryDetailView.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3050 /* CaddiePromptBuilder.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3053 /* LieClassificationService.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3054 /* CaddieShotViewModel.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3055 /* CaddieRecommendationOverlay.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F60789ABCD302E /* Caddie_aiTests.swift in Sources */,
+				E45591852F5C722500B8ACCF /* ShotRecommendationScenarioTests.swift in Sources */,
+				A1B2C3D4E5F60789ABCD3056 /* CaddieShotViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60789ABCD2007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F60789ABCD302F /* Caddie_aiUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1B2C3D4E5F60789ABCD6001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D4E5F60789ABCD1001 /* Caddie.ai */;
+			targetProxy = A1B2C3D4E5F60789ABCD5001 /* PBXContainerItemProxy */;
+		};
+		A1B2C3D4E5F60789ABCD6002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D4E5F60789ABCD1001 /* Caddie.ai */;
+			targetProxy = A1B2C3D4E5F60789ABCD5002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A1B2C3D4E5F60789ABCD7001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60789ABCD7002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1B2C3D4E5F60789ABCD7003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Caddie_ai.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to take photos of your golf lie for AI analysis.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Caddie.AI uses your location to suggest nearby golf courses.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Caddie.AI uses your location to suggest nearby golf courses.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photos to analyze your golf lie and provide better recommendations.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-ai";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60789ABCD7004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Caddie_ai.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to take photos of your golf lie for AI analysis.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Caddie.AI uses your location to suggest nearby golf courses.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Caddie.AI uses your location to suggest nearby golf courses.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photos to analyze your golf lie and provide better recommendations.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-ai";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A1B2C3D4E5F60789ABCD7005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/usr/lib",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-aiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/usr/lib";
+				SWIFT_MODULE_SEARCH_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks";
+				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Caddie.ai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Caddie.ai";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60789ABCD7006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/usr/lib",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-aiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/usr/lib";
+				SWIFT_MODULE_SEARCH_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks";
+				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Caddie.ai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Caddie.ai";
+			};
+			name = Release;
+		};
+		A1B2C3D4E5F60789ABCD7007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/usr/lib",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-aiUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/usr/lib";
+				SWIFT_MODULE_SEARCH_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks";
+				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Caddie.ai;
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60789ABCD7008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HM3GB27V58;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/usr/lib",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "al.Caddie.Caddie-aiUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/usr/lib";
+				SWIFT_MODULE_SEARCH_PATHS = "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks";
+				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Caddie.ai;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1B2C3D4E5F60789ABCD8001 /* Build configuration list for PBXProject "Caddie.ai" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60789ABCD7001 /* Debug */,
+				A1B2C3D4E5F60789ABCD7002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F60789ABCD8002 /* Build configuration list for PBXNativeTarget "Caddie.ai" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60789ABCD7003 /* Debug */,
+				A1B2C3D4E5F60789ABCD7004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F60789ABCD8003 /* Build configuration list for PBXNativeTarget "Caddie.aiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60789ABCD7005 /* Debug */,
+				A1B2C3D4E5F60789ABCD7006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F60789ABCD8004 /* Build configuration list for PBXNativeTarget "Caddie.aiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60789ABCD7007 /* Debug */,
+				A1B2C3D4E5F60789ABCD7008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1B2C3D4E5F60789ABCD0001 /* Project object */;
+}
