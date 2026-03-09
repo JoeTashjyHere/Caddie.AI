@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AI Caddie needs your location to provide accurate shot recommendations on the golf course.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AI Caddie needs access to your photo library to analyze putting photos.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>AI Caddie needs camera access to take photos of your putts for analysis.</string>
+</dict>
+</plist>
