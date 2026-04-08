@@ -102,7 +102,7 @@ struct CaddieCourseSelectionForGreenReader: View {
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(course.name)
+                                Text(course.displayName)
                                     .font(GolfTheme.headlineFont)
                                     .foregroundColor(GolfTheme.textPrimary)
                                 if let par = course.par {

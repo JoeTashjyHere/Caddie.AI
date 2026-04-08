@@ -29,7 +29,7 @@ struct RoundSummaryView: View {
                         Text("Round Complete!")
                             .font(GolfTheme.titleFont)
                             .foregroundColor(GolfTheme.textPrimary)
-                        Text(course.name)
+                        Text(course.displayName)
                             .font(GolfTheme.bodyFont)
                             .foregroundColor(GolfTheme.textSecondary)
                     }
@@ -41,6 +41,9 @@ struct RoundSummaryView: View {
                             .scaleEffect(1.5)
                             .padding(40)
                     } else if let summary = summaryViewModel.summary {
+                        if let pr = scoreTrackingService.currentRound {
+                            completedRoundScorecard(round: pr)
+                        }
                         summaryContent(summary: summary)
                     } else if let error = summaryViewModel.errorMessage {
                         errorView(error: error)
@@ -87,12 +90,76 @@ struct RoundSummaryView: View {
                 Task {
                     await summaryViewModel.fetchSummary(
                         courseId: course.id,
-                        roundViewModel: roundViewModel
+                        roundViewModel: roundViewModel,
+                        persistedRound: scoreTrackingService.currentRound
                     )
                     isLoading = false
                 }
             }
         }
+    }
+    
+    // MARK: - Completed round scorecard
+    
+    private func completedRoundScorecard(round: Round) -> some View {
+        let played = round.playedHoles().sorted { $0.holeNumber < $1.holeNumber }
+        let strokesTotal = round.totalStrokesPlayed()
+        let parTotal = round.totalParPlayed()
+        let vs = parTotal > 0 ? (strokesTotal - parTotal) : 0
+        let vsStr = parTotal == 0 ? "—" : (vs == 0 ? "E" : (vs > 0 ? "+\(vs)" : "\(vs)"))
+        let scoreTitle: String = {
+            switch round.persistedRoundLength {
+            case .some(.front9): return "Front 9 Score"
+            case .some(.back9): return "Back 9 Score"
+            default: return "Total"
+            }
+        }()
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("\(scoreTitle): \(strokesTotal)")
+                    .font(GolfTheme.titleFont)
+                    .foregroundColor(GolfTheme.textPrimary)
+                Spacer()
+                if parTotal > 0 {
+                    Text("Par \(parTotal)")
+                        .font(GolfTheme.bodyFont)
+                        .foregroundColor(GolfTheme.textSecondary)
+                }
+                Text(vsStr)
+                    .font(GolfTheme.headlineFont)
+                    .foregroundColor(GolfTheme.grassGreen)
+            }
+            if !played.isEmpty {
+                Text("Hole-by-hole")
+                    .font(GolfTheme.headlineFont)
+                    .foregroundColor(GolfTheme.textPrimary)
+                ForEach(played, id: \.holeNumber) { h in
+                    HStack {
+                        Text("Hole \(h.holeNumber)")
+                            .font(GolfTheme.bodyFont)
+                            .frame(width: 72, alignment: .leading)
+                        if let par = h.par {
+                            Text("Par \(par)")
+                                .font(GolfTheme.captionFont)
+                                .foregroundColor(GolfTheme.textSecondary)
+                                .frame(width: 56, alignment: .leading)
+                            let v = h.strokes - par
+                            let lbl = v == 0 ? "E" : (v > 0 ? "+\(v)" : "\(v)")
+                            Text("\(h.strokes) (\(lbl))")
+                                .font(GolfTheme.bodyFont)
+                        } else {
+                            Text("\(h.strokes) strokes")
+                                .font(GolfTheme.bodyFont)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GolfTheme.cream)
+        .cornerRadius(12)
     }
     
     // MARK: - Summary Content
@@ -332,7 +399,7 @@ class RoundSummaryViewModel: ObservableObject {
     @Published var summary: RoundSummary?
     @Published var errorMessage: String?
     
-    func fetchSummary(courseId: String, roundViewModel: RoundViewModel) async {
+    func fetchSummary(courseId: String, roundViewModel: RoundViewModel, persistedRound: Round?) async {
         // Calculate summary from round data
         var mostAccurateClub: ClubAccuracy? = nil
         var shotStruggledWith: ShotStruggle? = nil
@@ -350,10 +417,16 @@ class RoundSummaryViewModel: ObservableObject {
         var strugglingHoles: [Int] = []
         var holeScores: [(hole: Int, strokes: Int, par: Int)] = []
         
-        // Collect hole scores (assuming par 4 for all holes as default)
+        func parForHole(_ hole: Int) -> Int? {
+            persistedRound?.holes.first(where: { $0.holeNumber == hole })?.par
+        }
+
         for hole in 1...18 {
             if let strokes = scores[hole] {
-                let par = 4 // Default par, could be improved with course data
+                guard let par = parForHole(hole) else {
+                    print("[PAR] Missing par for hole \(hole) in round summary")
+                    continue
+                }
                 holeScores.append((hole: hole, strokes: strokes, par: par))
             }
         }
@@ -452,8 +525,7 @@ class RoundSummaryViewModel: ObservableObject {
         var missPatterns: [String: (count: Int, totalStrokes: Int)] = [:]
         
         for hole in 1...18 {
-            if let strokes = scores[hole] {
-                let par = 4 // Default par
+            if let strokes = scores[hole], let par = parForHole(hole) {
                 let overPar = strokes - par
                 
                 if overPar > 0 {

@@ -32,7 +32,7 @@ struct CourseMapView: View {
     let selectedCourseId: String?
     let onCourseSelected: (Course) -> Void
     
-    @State private var region: MKCoordinateRegion
+    @State private var position: MapCameraPosition
     @State private var mapAnnotations: [CourseAnnotation] = []
     
     // Computed property to make userLocation observable
@@ -51,24 +51,26 @@ struct CourseMapView: View {
         self.selectedCourseId = selectedCourseId
         self.onCourseSelected = onCourseSelected
         
-        // Initialize region to show user location or default to a reasonable area
+        // Initialize position to show user location or default to a reasonable area
         let initialLocation = userLocation ?? CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
-        _region = State(initialValue: MKCoordinateRegion(
+        _position = State(initialValue: .region(MKCoordinateRegion(
             center: initialLocation,
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        ))
+        )))
     }
     
     var body: some View {
-        Map(coordinateRegion: $region, annotationItems: mapAnnotations) { annotation in
-            MapAnnotation(coordinate: annotation.coordinate) {
-                CourseMapPin(
-                    course: annotation.course,
-                    isSelected: annotation.course.id == selectedCourseId,
-                    onTap: {
-                        onCourseSelected(annotation.course)
-                    }
-                )
+        Map(position: $position) {
+            ForEach(mapAnnotations) { annotation in
+                Annotation(annotation.course.displayName, coordinate: annotation.coordinate) {
+                    CourseMapPin(
+                        course: annotation.course,
+                        isSelected: annotation.course.id == selectedCourseId,
+                        onTap: {
+                            onCourseSelected(annotation.course)
+                        }
+                    )
+                }
             }
         }
         .mapStyle(.standard(elevation: .realistic))
@@ -89,18 +91,21 @@ struct CourseMapView: View {
                let selectedCourse = courses.first(where: { $0.id == selectedId }),
                let location = selectedCourse.location {
                 withAnimation(.easeInOut(duration: 0.5)) {
-                    region = MKCoordinateRegion(
+                    position = .region(MKCoordinateRegion(
                         center: location.clLocation,
                         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )
+                    ))
                 }
             }
         }
     }
     
     private func updateAnnotations() {
+        var seen = Set<String>()
         mapAnnotations = courses.compactMap { course in
             guard let location = course.location else { return nil }
+            let key = course.displayName
+            guard seen.insert(key).inserted else { return nil }
             return CourseAnnotation(
                 course: course,
                 coordinate: location.clLocation
@@ -124,10 +129,10 @@ struct CourseMapView: View {
             let lonSpan = max(bounds.maxLon - bounds.minLon, 0.01) * 1.3
             
             withAnimation(.easeInOut(duration: 0.5)) {
-                region = MKCoordinateRegion(
+                position = .region(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
                     span: MKCoordinateSpan(latitudeDelta: latSpan, longitudeDelta: lonSpan)
-                )
+                ))
             }
         } else {
             // Center on courses only
@@ -140,10 +145,10 @@ struct CourseMapView: View {
             let lonSpan = max(bounds.maxLon - bounds.minLon, 0.01) * 1.5
             
             withAnimation(.easeInOut(duration: 0.5)) {
-                region = MKCoordinateRegion(
+                position = .region(MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
                     span: MKCoordinateSpan(latitudeDelta: latSpan, longitudeDelta: lonSpan)
-                )
+                ))
             }
         }
     }

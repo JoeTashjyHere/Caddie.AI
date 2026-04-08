@@ -6,1027 +6,557 @@
 import SwiftUI
 import UIKit
 
-struct OnboardingView: View {
-    @EnvironmentObject var profileViewModel: ProfileViewModel
-    @EnvironmentObject var locationService: LocationService
-    @EnvironmentObject var courseService: CourseService
-    @StateObject private var courseViewModel = CourseViewModel()
-    
-    @AppStorage("hasOnboarded") private var hasOnboarded = false
-    @State private var currentStep = 1
-    @State private var showingCourseSelection = false
-    
-    var body: some View {
-        ZStack {
-            GolfTheme.cream.ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Progress Indicator
-                progressIndicator
-                
-                // Content
-                TabView(selection: $currentStep) {
-                    WelcomeStep()
-                        .tag(1)
-                    
-                    PlayerBasicsStep(profileViewModel: profileViewModel)
-                        .tag(2)
-                    
-                    PermissionsStep(
-                        locationService: locationService,
-                        courseViewModel: courseViewModel,
-                        showingCourseSelection: $showingCourseSelection
-                    )
-                        .tag(3)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                // Note: Removed .disabled(true) - it was blocking all interactions inside TabView
-                // To prevent swiping, we rely on programmatic step changes only
-                
-                // Navigation Buttons
-                navigationButtons
-            }
-        }
-        .sheet(isPresented: $showingCourseSelection) {
-            CourseSelectionView()
-                .environmentObject(courseViewModel)
-                .environmentObject(locationService)
-        }
-    }
-    
-    // MARK: - Progress Indicator
-    
-    private var progressIndicator: some View {
-        VStack(spacing: 8) {
-            HStack {
-                ForEach(1...3, id: \.self) { step in
-                    Circle()
-                        .fill(step <= currentStep ? GolfTheme.grassGreen : GolfTheme.textSecondary.opacity(0.3))
-                        .frame(width: 10, height: 10)
-                    
-                    if step < 3 {
-                        Spacer()
-                    }
-                }
-            }
-            .padding(.horizontal, 40)
-            
-            Text("Step \(currentStep) of 3")
-                .font(GolfTheme.captionFont)
-                .foregroundColor(GolfTheme.textSecondary)
-        }
-        .padding(.top, 20)
-        .padding(.bottom, 10)
-    }
-    
-    // MARK: - Navigation Buttons
-    
-    private var navigationButtons: some View {
-        VStack(spacing: 16) {
-            if currentStep == 1 {
-                PrimaryButton(
-                    title: "Get Started",
-                    action: {
-                        withAnimation(.spring(response: 0.3)) {
-                            currentStep = 2
-                        }
-                    }
-                )
-            } else if currentStep == 2 {
-                PrimaryButton(
-                    title: "Continue",
-                    action: {
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                        withAnimation(.spring(response: 0.3)) {
-                            currentStep = 3
-                        }
-                    },
-                    isEnabled: isStep2Valid
-                )
-            } else {
-                PrimaryButton(
-                    title: "Finish",
-                    action: {
-                        completeOnboarding()
-                    }
-                )
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 50)
-    }
-    
-    private var isStep2Valid: Bool {
-        let trimmedName = profileViewModel.profile.name.trimmingCharacters(in: .whitespaces)
-        return !trimmedName.isEmpty &&
-               !profileViewModel.profile.handedness.isEmpty &&
-               !profileViewModel.profile.skillLevel.isEmpty
-    }
-    
-    private func completeOnboarding() {
-        // Save profile
-        profileViewModel.saveProfile()
-        
-        // Complete onboarding
-        withAnimation(.spring(response: 0.3)) {
-            hasOnboarded = true
-        }
+// MARK: - Bag Entry
+
+struct BagClubEntry: Identifiable {
+    let id = UUID()
+    var clubType: ClubType
+    var distanceYards: Int
+    var isEnabled: Bool = true
+
+    static func generateBag(driverYards: Int, sevenIronYards: Int) -> [BagClubEntry] {
+        let longGap = Double(driverYards - sevenIronYards) / 6.0
+        let shortGap = max(longGap * 0.7, 8.0)
+        func r5(_ v: Double) -> Int { max(Int((v / 5.0).rounded()) * 5, 20) }
+
+        return [
+            BagClubEntry(clubType: .driver, distanceYards: driverYards),
+            BagClubEntry(clubType: .wood3, distanceYards: r5(Double(driverYards) - longGap)),
+            BagClubEntry(clubType: .wood5, distanceYards: r5(Double(driverYards) - longGap * 2)),
+            BagClubEntry(clubType: .hybrid4, distanceYards: r5(Double(driverYards) - longGap * 3)),
+            BagClubEntry(clubType: .iron5, distanceYards: r5(Double(driverYards) - longGap * 4)),
+            BagClubEntry(clubType: .iron6, distanceYards: r5(Double(driverYards) - longGap * 5)),
+            BagClubEntry(clubType: .iron7, distanceYards: sevenIronYards),
+            BagClubEntry(clubType: .iron8, distanceYards: r5(Double(sevenIronYards) - shortGap)),
+            BagClubEntry(clubType: .iron9, distanceYards: r5(Double(sevenIronYards) - shortGap * 2)),
+            BagClubEntry(clubType: .pitchingWedge, distanceYards: r5(Double(sevenIronYards) - shortGap * 3)),
+            BagClubEntry(clubType: .gapWedge, distanceYards: r5(Double(sevenIronYards) - shortGap * 4)),
+            BagClubEntry(clubType: .sandWedge, distanceYards: r5(Double(sevenIronYards) - shortGap * 5)),
+            BagClubEntry(clubType: .lobWedge, distanceYards: r5(Double(sevenIronYards) - shortGap * 6)),
+        ]
     }
 }
 
-// MARK: - Step 1: Welcome
-
-struct WelcomeStep: View {
-    var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
-            
-            Image(systemName: "figure.golf")
-                .font(.system(size: 80))
-                .foregroundColor(GolfTheme.grassGreen)
-            
-            VStack(spacing: 16) {
-                Text("Your AI caddie is ready")
-                    .font(GolfTheme.titleFont)
-                    .foregroundColor(GolfTheme.textPrimary)
-                    .multilineTextAlignment(.center)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    FeatureRow(
-                        icon: "target",
-                        title: "Club Recommendations",
-                        description: "Get personalized club suggestions based on your game"
-                    )
-                    
-                    FeatureRow(
-                        icon: "flag.fill",
-                        title: "Hole Strategy",
-                        description: "AI-powered strategy for each hole"
-                    )
-                    
-                    FeatureRow(
-                        icon: "location.fill",
-                        title: "Putting Help",
-                        description: "Improve your putting with AI insights"
-                    )
-                }
-                .padding(.horizontal, 32)
-            }
-            
-            Spacer()
-        }
-        .padding()
-    }
-}
-
-struct FeatureRow: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(GolfTheme.grassGreen)
-                .frame(width: 30)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(GolfTheme.headlineFont)
-                    .foregroundColor(GolfTheme.textPrimary)
-                
-                Text(description)
-                    .font(GolfTheme.bodyFont)
-                    .foregroundColor(GolfTheme.textSecondary)
-            }
-            
-            Spacer()
-        }
-    }
-}
-
-// MARK: - Step 2: Player Basics
-
-struct PlayerBasicsStep: View {
-    @ObservedObject var profileViewModel: ProfileViewModel
-    @State private var playerName = ""
-    @State private var selectedHandedness = "Right"
-    @State private var selectedSkillLevel = "Intermediate"
-    
-    let handednessOptions = ["Left", "Right"]
-    let skillLevelOptions = ["Beginner", "Intermediate", "Advanced"]
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                VStack(spacing: 12) {
-                    Text("Tell us about yourself")
-                        .font(GolfTheme.titleFont)
-                        .foregroundColor(GolfTheme.textPrimary)
-                    
-                    Text("This helps your AI caddie provide better recommendations")
-                        .font(GolfTheme.bodyFont)
-                        .foregroundColor(GolfTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 20)
-                .padding(.horizontal)
-                
-                VStack(spacing: 24) {
-                    // Player Name
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Name")
-                            .font(GolfTheme.headlineFont)
-                            .foregroundColor(GolfTheme.textPrimary)
-                        
-                        TextField("Enter your name", text: $playerName)
-                            .textFieldStyle(.roundedBorder)
-                            .font(GolfTheme.bodyFont)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.words)
-                            .onChange(of: playerName) { oldValue, newValue in
-                                profileViewModel.profile.name = newValue
-                            }
-                    }
-                    .padding()
-                    .background(GolfTheme.cream)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                    
-                    // Handedness
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Handedness")
-                            .font(GolfTheme.headlineFont)
-                            .foregroundColor(GolfTheme.textPrimary)
-                        
-                        Picker("Handedness", selection: $selectedHandedness) {
-                            ForEach(handednessOptions, id: \.self) { option in
-                                Text(option).tag(option)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: selectedHandedness) { oldValue, newValue in
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                            impactFeedback.impactOccurred()
-                            profileViewModel.profile.handedness = newValue
-                        }
-                    }
-                    .padding()
-                    .background(GolfTheme.cream)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                    
-                    // Skill Level
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Skill Level")
-                            .font(GolfTheme.headlineFont)
-                            .foregroundColor(GolfTheme.textPrimary)
-                        
-                        Picker("Skill Level", selection: $selectedSkillLevel) {
-                            ForEach(skillLevelOptions, id: \.self) { option in
-                                Text(option).tag(option)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: selectedSkillLevel) { oldValue, newValue in
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                            impactFeedback.impactOccurred()
-                            profileViewModel.profile.skillLevel = newValue
-                        }
-                    }
-                    .padding()
-                    .background(GolfTheme.cream)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                }
-                .padding(.horizontal, 24)
-            }
-            .padding(.bottom, 100) // Space for button
-        }
-        .onAppear {
-            // Initialize from existing profile if available
-            playerName = profileViewModel.profile.name
-            selectedHandedness = profileViewModel.profile.handedness.isEmpty ? "Right" : profileViewModel.profile.handedness
-            selectedSkillLevel = profileViewModel.profile.skillLevel.isEmpty ? "Intermediate" : profileViewModel.profile.skillLevel
-            
-            // Sync initial values to profile
-            if profileViewModel.profile.name != playerName {
-                profileViewModel.profile.name = playerName
-            }
-            if profileViewModel.profile.handedness != selectedHandedness {
-                profileViewModel.profile.handedness = selectedHandedness
-            }
-            if profileViewModel.profile.skillLevel != selectedSkillLevel {
-                profileViewModel.profile.skillLevel = selectedSkillLevel
-            }
-        }
-    }
-}
-
-// MARK: - Step 3: Permissions
-
-struct PermissionsStep: View {
-    @ObservedObject var locationService: LocationService
-    @ObservedObject var courseViewModel: CourseViewModel
-    @Binding var showingCourseSelection: Bool
-    
-    @State private var locationEnabled = false
-    @State private var homeCourse: Course?
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                VStack(spacing: 12) {
-                    Text("Almost there!")
-                        .font(GolfTheme.titleFont)
-                        .foregroundColor(GolfTheme.textPrimary)
-                    
-                    Text("Enable location to auto-load nearby courses")
-                        .font(GolfTheme.bodyFont)
-                        .foregroundColor(GolfTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 20)
-                .padding(.horizontal)
-                
-                VStack(spacing: 24) {
-                    // Location Permission Card
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "location.fill")
-                                .font(.title2)
-                                .foregroundColor(GolfTheme.grassGreen)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Enable Location")
-                                    .font(GolfTheme.headlineFont)
-                                    .foregroundColor(GolfTheme.textPrimary)
-                                
-                                Text("Auto-load nearby courses when you open the app")
-                                    .font(GolfTheme.captionFont)
-                                    .foregroundColor(GolfTheme.textSecondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if locationService.authorizationStatus == .authorizedWhenInUse ||
-                               locationService.authorizationStatus == .authorizedAlways {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(GolfTheme.grassGreen)
-                                    .font(.title3)
-                            }
-                        }
-                        
-                        if locationService.authorizationStatus != .authorizedWhenInUse &&
-                           locationService.authorizationStatus != .authorizedAlways {
-                            Button(action: {
-                                locationService.requestAuthorization()
-                            }) {
-                                Text("Enable Location")
-                                    .font(GolfTheme.bodyFont)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(GolfTheme.grassGreen)
-                                    .cornerRadius(10)
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(GolfTheme.cream)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                    
-                    // Home Course Selection (Optional)
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "flag.fill")
-                                .font(.title2)
-                                .foregroundColor(GolfTheme.accentGold)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Home Course (Optional)")
-                                    .font(GolfTheme.headlineFont)
-                                    .foregroundColor(GolfTheme.textPrimary)
-                                
-                                Text("Quickly access your favorite course")
-                                    .font(GolfTheme.captionFont)
-                                    .foregroundColor(GolfTheme.textSecondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        
-                        if let course = homeCourse ?? courseViewModel.currentCourse {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(course.name)
-                                        .font(GolfTheme.bodyFont)
-                                        .foregroundColor(GolfTheme.textPrimary)
-                                    
-                                    if let par = course.par {
-                                        Text("Par \(par)")
-                                            .font(GolfTheme.captionFont)
-                                            .foregroundColor(GolfTheme.textSecondary)
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    homeCourse = nil
-                                    courseViewModel.currentCourse = nil
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(GolfTheme.textSecondary)
-                                }
-                            }
-                            .padding()
-                            .background(GolfTheme.grassGreen.opacity(0.1))
-                            .cornerRadius(8)
-                        } else {
-                            Button(action: {
-                                showingCourseSelection = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "plus.circle.fill")
-                                    Text("Select Home Course")
-                                }
-                                .font(GolfTheme.bodyFont)
-                                .foregroundColor(GolfTheme.grassGreen)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(GolfTheme.grassGreen.opacity(0.1))
-                                .cornerRadius(10)
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(GolfTheme.cream)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                }
-                .padding(.horizontal, 24)
-            }
-            .padding(.bottom, 100) // Space for button
-        }
-        .onAppear {
-            // Load current course if available
-            courseViewModel.loadCurrentCourse()
-            homeCourse = courseViewModel.currentCourse
-        }
-        .onChange(of: courseViewModel.currentCourse) { oldValue, newValue in
-            homeCourse = newValue
-        }
-    }
-}
-
-#Preview {
-    OnboardingView()
-        .environmentObject(ProfileViewModel())
-        .environmentObject(LocationService.shared)
-}
-
-
-//
-//  OnboardingCoordinatorView.swift
-//  Caddie.ai
-//
-
-import SwiftUI
-
+// MARK: - Coordinator
 
 struct OnboardingCoordinatorView: View {
     enum Step: Int, CaseIterable {
-        case welcome = 1
-        case basicInfo
-        case golfSnapshot
-        case clubDistances
-        case riskProfile
-        case puttingTendencies
-        case finish
-
-        var title: String {
-            "Step \(rawValue) of \(Self.allCases.count)"
-        }
+        case carousel, signUp, preferences, driverDistance, ironDistance, bagReady, bagReview
     }
 
     @EnvironmentObject var userProfileStore: UserProfileStore
     let initialMessage: String?
 
-    @State private var step: Step = .welcome
+    @State private var step: Step = .carousel
+    @State private var navigatingForward = true
+
+    @State private var firstName = ""
+    @State private var distanceUnit = "Imperial"
+    @State private var temperatureUnit = "Fahrenheit"
+    @State private var handedness = "Right"
+    @State private var driverYards = 250
+    @State private var sevenIronYards = 150
+    @State private var bagEntries: [BagClubEntry] = []
 
     init(initialMessage: String? = nil) {
         self.initialMessage = initialMessage
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                VStack(spacing: 8) {
-                    ProgressView(value: Double(step.rawValue), total: Double(Step.allCases.count))
-                        .tint(GolfTheme.grassGreen)
-                    HStack {
-                        Text(step.title)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                }
-                .padding()
+        ZStack {
+            Color(uiColor: .systemBackground).ignoresSafeArea()
 
-                Group {
-                    switch step {
-                    case .welcome:
-                        WelcomeScreen(initialMessage: initialMessage)
-                    case .basicInfo:
-                        BasicInfoScreen(profile: $userProfileStore.profile)
-                    case .golfSnapshot:
-                        GolfSnapshotScreen(profile: $userProfileStore.profile)
-                    case .clubDistances:
-                        ClubDistancesScreen(profile: $userProfileStore.profile)
-                    case .riskProfile:
-                        RiskProfileScreen(profile: $userProfileStore.profile)
-                    case .puttingTendencies:
-                        PuttingTendenciesScreen(profile: $userProfileStore.profile)
-                    case .finish:
-                        FinishScreen(profile: userProfileStore.profile)
-                    }
+            Group {
+                switch step {
+                case .carousel:
+                    carouselStep
+                case .signUp:
+                    signUpStep
+                case .preferences:
+                    preferencesStep
+                case .driverDistance:
+                    driverStep
+                case .ironDistance:
+                    ironStep
+                case .bagReady:
+                    bagReadyStep
+                case .bagReview:
+                    bagReviewStep
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                HStack(spacing: 12) {
-                    if step != .welcome {
-                        Button("Back") {
-                            if let previous = Step(rawValue: step.rawValue - 1) {
-                                step = previous
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
-                    Button(step == .finish ? "Start your first round" : "Next") {
-                        if step == .clubDistances {
-                            userProfileStore.ensureRequiredClubRows()
-                        }
-                        if step == .finish {
-                            userProfileStore.save()
-                        } else if let next = Step(rawValue: step.rawValue + 1) {
-                            step = next
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(GolfTheme.grassGreen)
-                    .disabled(!canAdvanceFromCurrentStep)
-                }
-                .padding()
             }
-            .background(Color(.systemBackground).ignoresSafeArea())
+            .id(step)
+            .transition(.asymmetric(
+                insertion: .move(edge: navigatingForward ? .trailing : .leading).combined(with: .opacity),
+                removal: .move(edge: navigatingForward ? .leading : .trailing).combined(with: .opacity)
+            ))
         }
+        .animation(.easeInOut(duration: 0.35), value: step)
         .interactiveDismissDisabled(!userProfileStore.isOnboardingComplete)
     }
 
-    private var canAdvanceFromCurrentStep: Bool {
-        switch step {
-        case .welcome:
-            return true
-        case .basicInfo:
-            let first = userProfileStore.profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let email = userProfileStore.profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
-            return !first.isEmpty && !email.isEmpty && email.contains("@")
-        case .clubDistances:
-            return hasRequiredClubs
-        case .riskProfile:
-            return !(userProfileStore.profile.greenRiskPreference?.isEmpty ?? true)
-        default:
-            return true
-        }
+    // MARK: Steps
+
+    private var carouselStep: some View {
+        OnboardingCarouselScreen(onGetStarted: advance, onLogIn: advance)
     }
 
-    private var hasRequiredClubs: Bool {
-        let selected = Set(userProfileStore.profile.clubDistances.map { $0.clubTypeId })
-        return selected.contains(ClubType.driver.rawValue)
-            && selected.contains(ClubType.iron7.rawValue)
-            && selected.contains(ClubType.pitchingWedge.rawValue)
+    private var signUpStep: some View {
+        OnboardingSignUpScreen(firstName: $firstName, onContinue: advance, onBack: goBack)
+    }
+
+    private var preferencesStep: some View {
+        OnboardingPreferencesScreen(
+            distanceUnit: $distanceUnit,
+            temperatureUnit: $temperatureUnit,
+            handedness: $handedness,
+            onContinue: advance,
+            onBack: goBack
+        )
+    }
+
+    private var driverStep: some View {
+        ClubDistanceEntryScreen(
+            clubName: "Driver",
+            subtitle: "How far do you hit your driver?",
+            defaultYards: 250,
+            range: 150...400,
+            yards: $driverYards,
+            onContinue: advance,
+            onBack: goBack,
+            onSkip: { driverYards = 250; advance() }
+        )
+    }
+
+    private var ironStep: some View {
+        ClubDistanceEntryScreen(
+            clubName: "7 Iron",
+            subtitle: "How far do you hit your 7 iron?",
+            defaultYards: 150,
+            range: 80...250,
+            yards: $sevenIronYards,
+            onContinue: {
+                bagEntries = BagClubEntry.generateBag(driverYards: driverYards, sevenIronYards: sevenIronYards)
+                advance()
+            },
+            onBack: goBack,
+            onSkip: {
+                sevenIronYards = 150
+                bagEntries = BagClubEntry.generateBag(driverYards: driverYards, sevenIronYards: 150)
+                advance()
+            }
+        )
+    }
+
+    private var bagReadyStep: some View {
+        BagReadyScreen(onReviewBag: advance)
+    }
+
+    private var bagReviewStep: some View {
+        OnboardingBagReviewScreen(
+            entries: $bagEntries,
+            onComplete: completeOnboarding,
+            onSaveMinimal: completeWithMinimal
+        )
+    }
+
+    // MARK: Navigation
+
+    private func advance() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        navigatingForward = true
+        if let next = Step(rawValue: step.rawValue + 1) { step = next }
+    }
+
+    private func goBack() {
+        navigatingForward = false
+        if let prev = Step(rawValue: step.rawValue - 1) { step = prev }
+    }
+
+    // MARK: Completion
+
+    private func completeOnboarding() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        applyProfile(clubs: bagEntries.filter(\.isEnabled).map {
+            ClubDistance(clubTypeId: $0.clubType.rawValue, distanceYards: $0.distanceYards)
+        })
+    }
+
+    private func completeWithMinimal() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        applyProfile(clubs: [
+            ClubDistance(clubTypeId: ClubType.driver.rawValue, distanceYards: driverYards),
+            ClubDistance(clubTypeId: ClubType.iron7.rawValue, distanceYards: sevenIronYards),
+        ])
+    }
+
+    private func applyProfile(clubs: [ClubDistance]) {
+        userProfileStore.profile.firstName = firstName
+        userProfileStore.profile.distanceUnit = distanceUnit
+        userProfileStore.profile.temperatureUnit = temperatureUnit
+        userProfileStore.profile.handedness = handedness
+        userProfileStore.profile.clubDistances = clubs
+        userProfileStore.save()
     }
 }
 
-private struct WelcomeScreen: View {
-    let initialMessage: String?
+// MARK: - 1. Carousel
+
+private struct OnboardingCarouselScreen: View {
+    var onGetStarted: () -> Void
+    var onLogIn: () -> Void
+    @State private var page = 0
+
+    private let pages: [(icon: String, colors: [Color], title: String, subtitle: String)] = [
+        ("location.viewfinder",
+         [Color(red: 0.12, green: 0.52, blue: 0.32), Color(red: 0.06, green: 0.32, blue: 0.18)],
+         "Know Every Distance",
+         "GPS distances to the hole and every hazard on any course worldwide."),
+        ("sparkles",
+         [Color(red: 0.10, green: 0.46, blue: 0.44), Color(red: 0.05, green: 0.28, blue: 0.24)],
+         "Your AI Caddie",
+         "Personalized club and shot recommendations powered by AI."),
+        ("chart.line.uptrend.xyaxis",
+         [Color(red: 0.15, green: 0.40, blue: 0.55), Color(red: 0.08, green: 0.22, blue: 0.34)],
+         "Track Your Progress",
+         "Keep score, track stats, and watch your handicap improve over time."),
+    ]
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "figure.golf")
-                .font(.system(size: 64))
-                .foregroundColor(GolfTheme.grassGreen)
-            Text("Set up your AI caddie")
-                .font(.title2.weight(.semibold))
-            Text("2–3 minutes now for better shot and putt recommendations all round.")
+        VStack(spacing: 0) {
+            TabView(selection: $page) {
+                ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
+                    OnboardingHeroCard(
+                        icon: item.icon,
+                        gradient: item.colors,
+                        title: item.title,
+                        subtitle: item.subtitle
+                    )
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+
+            VStack(spacing: 14) {
+                BrandedPrimaryButton(title: "Get Started", action: onGetStarted)
+                BrandedSecondaryButton(title: "Log In", action: onLogIn)
+            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 48)
+        }
+    }
+}
+
+// MARK: - 2. Sign Up
+
+private struct OnboardingSignUpScreen: View {
+    @Binding var firstName: String
+    var onContinue: () -> Void
+    var onBack: () -> Void
+    @State private var showNameInput = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            OnboardingNavBar(onBack: onBack)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    CaddieLogoView(height: 90)
+                        .padding(.top, 16)
+
+                    VStack(spacing: 8) {
+                        Text("Sign Up")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                        Text("Join golfers improving their game\nevery round.")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                    }
+
+                    if showNameInput {
+                        nameEntry
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else {
+                        authSection
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 40)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showNameInput)
+    }
+
+    private var authSection: some View {
+        VStack(spacing: 14) {
+            BrandedAuthButton(type: .apple) { withAnimation { showNameInput = true } }
+            BrandedAuthButton(type: .google) { withAnimation { showNameInput = true } }
+
+            LabeledDivider(label: "Or You Can")
+                .padding(.vertical, 4)
+
+            BrandedAuthButton(type: .email) { withAnimation { showNameInput = true } }
+
+            (Text("By signing up, you agree to our ") +
+             Text("Terms of Service").foregroundColor(GolfTheme.accentBlue) +
+             Text(" and ") +
+             Text("Privacy Policy").foregroundColor(GolfTheme.accentBlue) +
+             Text("."))
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            if let initialMessage {
-                Text(initialMessage)
-                    .font(.subheadline)
+                .padding(.top, 8)
+        }
+        .padding(.top, 16)
+    }
+
+    private var nameEntry: some View {
+        VStack(spacing: 20) {
+            Text("What should we call you?")
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+
+            TextField("First name", text: $firstName)
+                .font(.system(size: 17))
+                .padding(16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.words)
+
+            BrandedPrimaryButton(title: "Continue", action: onContinue)
+                .opacity(firstName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
+                .disabled(firstName.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .padding(.top, 12)
+    }
+}
+
+// MARK: - 3. Preferences
+
+private struct OnboardingPreferencesScreen: View {
+    @Binding var distanceUnit: String
+    @Binding var temperatureUnit: String
+    @Binding var handedness: String
+    var onContinue: () -> Void
+    var onBack: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            OnboardingNavBar(title: "Preferences", onBack: onBack)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 32) {
+                    PreferenceRadioGroup(
+                        title: "Distance",
+                        options: [("Imperial (Feet, Yards, Miles)", "Imperial"),
+                                  ("Metric (Meters, Kilometers)", "Metric")],
+                        selection: $distanceUnit
+                    )
+                    PreferenceRadioGroup(
+                        title: "Temperature",
+                        options: [("Fahrenheit", "Fahrenheit"),
+                                  ("Celsius", "Celsius")],
+                        selection: $temperatureUnit
+                    )
+                    PreferenceRadioGroup(
+                        title: "Club Direction / Dominant Hand",
+                        options: [("Right Handed", "Right"),
+                                  ("Left Handed", "Left")],
+                        selection: $handedness
+                    )
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 20)
+                .padding(.bottom, 120)
+            }
+
+            BrandedPrimaryButton(title: "Continue", action: onContinue)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 48)
+        }
+    }
+}
+
+// MARK: - 4 & 5. Club Distance Entry
+
+private struct ClubDistanceEntryScreen: View {
+    let clubName: String
+    let subtitle: String
+    let defaultYards: Int
+    let range: ClosedRange<Int>
+    @Binding var yards: Int
+    var onContinue: () -> Void
+    var onBack: () -> Void
+    var onSkip: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            OnboardingNavBar(showSkip: true, onBack: onBack, onSkip: onSkip)
+
+            Spacer()
+
+            VStack(spacing: 6) {
+                Text(clubName)
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                Text(subtitle)
+                    .font(.system(size: 16))
+                    .foregroundColor(.secondary)
+            }
+
+            ZStack {
+                Circle()
+                    .fill(GolfTheme.grassGreen.opacity(0.08))
+                    .frame(width: 140, height: 140)
+                Image(systemName: clubName == "Driver" ? "figure.golf" : "sportscourt.fill")
+                    .font(.system(size: 56, weight: .ultraLight))
+                    .foregroundStyle(GolfTheme.grassGreen.opacity(0.6))
+            }
+            .padding(.vertical, 16)
+
+            VStack(spacing: 0) {
+                Text("\(yards)")
+                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .contentTransition(.numericText())
+                Text("Yds")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack(spacing: 24) {
+                stepButton(delta: -10, label: "-10")
+                stepButton(delta: -5, label: "-5")
+                stepButton(delta: 5, label: "+5")
+                stepButton(delta: 10, label: "+10")
+            }
+            .padding(.top, 16)
+
+            Spacer()
+
+            BrandedPrimaryButton(title: "Add Distance", action: onContinue)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 48)
+        }
+    }
+
+    private func stepButton(delta: Int, label: String) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            let newVal = yards + delta
+            if range.contains(newVal) { yards = newVal }
+        } label: {
+            Text(label)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(GolfTheme.accentBlue)
+                .frame(width: 52, height: 40)
+                .background(GolfTheme.lightBlue)
+                .cornerRadius(10)
+        }
+    }
+}
+
+// MARK: - 6. Bag Ready
+
+private struct BagReadyScreen: View {
+    var onReviewBag: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 28) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [GolfTheme.grassGreen.opacity(0.12), GolfTheme.grassGreen.opacity(0.02)],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 100
+                            )
+                        )
+                        .frame(width: 180, height: 180)
+
+                    Image(systemName: "bag.fill")
+                        .font(.system(size: 72, weight: .thin))
+                        .foregroundStyle(GolfTheme.grassGreen)
+                }
+
+                VStack(spacing: 12) {
+                    Text("Your Golf Bag is Ready")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+
+                    Text("We estimated your club distances\nbased on your Driver and 7 Iron.")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+            }
+
+            Spacer()
+
+            BrandedPrimaryButton(title: "Review My Bag", action: onReviewBag)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 48)
+        }
+    }
+}
+
+// MARK: - 7. Bag Review
+
+private struct OnboardingBagReviewScreen: View {
+    @Binding var entries: [BagClubEntry]
+    var onComplete: () -> Void
+    var onSaveMinimal: () -> Void
+    @State private var editingId: UUID?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 8) {
+                Text("Review your bag")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                Text("Add, remove, or adjust distances to\npersonalize your bag.")
+                    .font(.system(size: 15))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    .lineSpacing(2)
             }
-            Spacer()
-        }
-    }
-}
+            .padding(.top, 16)
+            .padding(.bottom, 8)
 
-private struct BasicInfoScreen: View {
-    @Binding var profile: UserProfile
-    @FocusState private var focusedField: Field?
-
-    private enum Field: Hashable {
-        case firstName
-        case lastName
-        case email
-        case phone
-    }
-
-    var body: some View {
-        Form {
-            Section("Basic Info") {
-                TextField("First name *", text: $profile.firstName)
-                    .focused($focusedField, equals: .firstName)
-                TextField("Last name", text: Binding($profile.lastName, replacingNilWith: ""))
-                    .focused($focusedField, equals: .lastName)
-                TextField("Email *", text: $profile.email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .focused($focusedField, equals: .email)
-                TextField("Phone", text: Binding($profile.phone, replacingNilWith: ""))
-                    .keyboardType(.phonePad)
-                    .focused($focusedField, equals: .phone)
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focusedField = nil }
-            }
-        }
-    }
-}
-
-private struct GolfSnapshotScreen: View {
-    @Binding var profile: UserProfile
-    @FocusState private var focusedField: Field?
-
-    private enum Field: Hashable {
-        case averageScore
-        case yearsPlaying
-        case golfGoal
-    }
-
-    var body: some View {
-        Form {
-            Section("Golf Snapshot") {
-                TextField("Average score", text: Binding($profile.averageScore, replacingNilWith: ""))
-                    .keyboardType(.numbersAndPunctuation)
-                    .focused($focusedField, equals: .averageScore)
-                TextField("Years playing", value: $profile.yearsPlaying, format: .number)
-                    .keyboardType(.numberPad)
-                    .focused($focusedField, equals: .yearsPlaying)
-                TextField("Golf goal", text: Binding($profile.golfGoal, replacingNilWith: ""), axis: .vertical)
-                    .lineLimit(2...4)
-                    .focused($focusedField, equals: .golfGoal)
-                Picker("Seriousness", selection: Binding($profile.seriousness, replacingNilWith: "")) {
-                    Text("Not set").tag("")
-                    Text("Casual").tag("Casual")
-                    Text("Committed").tag("Committed")
-                    Text("Obsessed").tag("Obsessed")
-                }
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focusedField = nil }
-            }
-        }
-    }
-}
-
-private struct ClubDistancesScreen: View {
-    @Binding var profile: UserProfile
-    @State private var showingAddClubSheet = false
-    @State private var pendingDeleteClub: ClubDistance?
-    @State private var newClubType: ClubType = .driver
-    @State private var newDistance: Int = 150
-    @State private var newShotPreference: ClubShotPreference = .straight
-    @State private var newConfidence: ClubConfidenceLevel = .neutral
-    @State private var newNotes: String = ""
-    @FocusState private var isNotesFocused: Bool
-
-    var body: some View {
-        Form {
-            Section("Required: Driver, 7 Iron, Pitching Wedge") {
-                ForEach(Array(profile.clubDistances.indices), id: \.self) { index in
-                    clubRow(index: index)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                pendingDeleteClub = profile.clubDistances[index]
-                            } label: {
-                                Label("Delete club", systemImage: "trash")
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 10) {
+                    ForEach($entries) { $entry in
+                        BagReviewRow(
+                            entry: $entry,
+                            isEditing: editingId == entry.id,
+                            onEdit: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    editingId = editingId == entry.id ? nil : entry.id
+                                }
                             }
-                            .accessibilityLabel("Delete club \(profile.clubDistances[index].name)")
-                        }
-                }
-
-                Button {
-                    newClubType = availableClubTypes.first ?? .driver
-                    newDistance = 150
-                    newShotPreference = .straight
-                    newConfidence = .neutral
-                    newNotes = ""
-                    showingAddClubSheet = true
-                } label: {
-                    Label("Add another club", systemImage: "plus")
-                }
-                .disabled(availableClubTypes.isEmpty)
-
-                if availableClubTypes.isEmpty {
-                    Text("All preset clubs already added.")
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .onAppear {
-            if profile.clubDistances.isEmpty {
-                profile.clubDistances = [
-                    ClubDistance(clubTypeId: ClubType.driver.rawValue, distanceYards: 0),
-                    ClubDistance(clubTypeId: ClubType.iron7.rawValue, distanceYards: 0),
-                    ClubDistance(clubTypeId: ClubType.pitchingWedge.rawValue, distanceYards: 0)
-                ]
-            }
-        }
-        .confirmationDialog(
-            "Delete club?",
-            isPresented: Binding(
-                get: { pendingDeleteClub != nil },
-                set: { if !$0 { pendingDeleteClub = nil } }
-            )
-        ) {
-            Button("Delete", role: .destructive) {
-                if let club = pendingDeleteClub {
-                    deleteClub(club)
-                }
-                pendingDeleteClub = nil
-            }
-            Button("Cancel", role: .cancel) {
-                pendingDeleteClub = nil
-            }
-        } message: {
-            if let club = pendingDeleteClub {
-                Text("Remove \(club.name) from your bag?")
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .sheet(isPresented: $showingAddClubSheet) {
-            NavigationStack {
-                Form {
-                    Section("Club") {
-                        Picker("Club Type", selection: $newClubType) {
-                            ForEach(availableClubTypes) { clubType in
-                                Text(clubType.displayName).tag(clubType)
-                            }
-                        }
-                    }
-
-                    Section("Distance") {
-                        Picker("Distance", selection: $newDistance) {
-                            ForEach(stride(from: 0, through: 500, by: 5).map { $0 }, id: \.self) { yards in
-                                Text("\(yards) yds").tag(yards)
-                            }
-                        }
-                    }
-
-                    Section("Shot Preference") {
-                        Picker("Preference", selection: $newShotPreference) {
-                            ForEach(ClubShotPreference.allCases) { preference in
-                                Text(preference.displayName).tag(preference)
-                            }
-                        }
-                    }
-
-                    Section("Confidence") {
-                        Picker("Confidence", selection: $newConfidence) {
-                            ForEach(ClubConfidenceLevel.allCases) { confidence in
-                                Text(confidence.displayName).tag(confidence)
-                            }
-                        }
-                    }
-
-                    Section("Notes") {
-                        TextField("Optional notes", text: $newNotes, axis: .vertical)
-                            .lineLimit(2...4)
-                            .focused($isNotesFocused)
+                        )
                     }
                 }
-                .navigationTitle("Add Club")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            isNotesFocused = false
-                            showingAddClubSheet = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            profile.clubDistances.append(
-                                ClubDistance(
-                                    clubTypeId: newClubType.rawValue,
-                                    distanceYards: newDistance,
-                                    shotPreferenceId: newShotPreference.rawValue,
-                                    confidenceLevelId: newConfidence.rawValue,
-                                    notes: newNotes.isEmpty ? nil : newNotes
-                                )
-                            )
-                            isNotesFocused = false
-                            showingAddClubSheet = false
-                        }
-                        .disabled(!availableClubTypes.contains(newClubType))
-                    }
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") { isNotesFocused = false }
-                    }
-                }
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { isNotesFocused = false }
-            }
-        }
-    }
-
-    private var availableClubTypes: [ClubType] {
-        let selected = Set(profile.clubDistances.map(\.clubTypeId))
-        return ClubType.allCases.filter { !selected.contains($0.rawValue) }
-    }
-
-    @ViewBuilder
-    private func clubRow(index: Int) -> some View {
-        let clubBinding = $profile.clubDistances[index]
-        let rowClub = profile.clubDistances[index]
-        let clubTypeBinding = Binding<ClubType>(
-            get: { clubBinding.wrappedValue.clubType },
-            set: { clubBinding.wrappedValue.clubType = $0 }
-        )
-        let shotPreferenceBinding = Binding<ClubShotPreference>(
-            get: { clubBinding.wrappedValue.shotPreference },
-            set: { clubBinding.wrappedValue.shotPreference = $0 }
-        )
-        let confidenceBinding = Binding<ClubConfidenceLevel>(
-            get: { clubBinding.wrappedValue.confidenceLevel },
-            set: { clubBinding.wrappedValue.confidenceLevel = $0 }
-        )
-
-        VStack(alignment: .leading, spacing: 10) {
-            Picker("Club Type", selection: clubTypeBinding) {
-                ForEach(clubTypeOptions(for: rowClub)) { clubType in
-                    Text(clubType.displayName).tag(clubType)
-                }
-            }
-            .frame(minHeight: 44)
-
-            HStack(spacing: 12) {
-                Picker("Distance", selection: clubBinding.distanceYards) {
-                    ForEach(distanceOptions(including: rowClub.distanceYards), id: \.self) { yards in
-                        Text("\(yards) yds").tag(yards)
-                    }
-                }
-                .frame(minHeight: 44)
-
-                Picker("Shot Preference", selection: shotPreferenceBinding) {
-                    ForEach(ClubShotPreference.allCases) { preference in
-                        Text(preference.displayName).tag(preference)
-                    }
-                }
-                .frame(minHeight: 44)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
             }
 
-            Picker("Confidence", selection: confidenceBinding) {
-                ForEach(ClubConfidenceLevel.allCases) { confidence in
-                    Text(confidence.displayName).tag(confidence)
-                }
+            VStack(spacing: 14) {
+                BrandedPrimaryButton(title: "Continue", action: onComplete)
+                BrandedSecondaryButton(title: "Save Driver & 7 Iron Only", action: onSaveMinimal)
             }
-            .frame(minHeight: 44)
-
-            TextField("Notes", text: Binding(clubBinding.notes, replacingNilWith: ""))
-                .focused($isNotesFocused)
-        }
-        .contentShape(Rectangle())
-    }
-
-    private func clubTypeOptions(for club: ClubDistance) -> [ClubType] {
-        let used = Set(profile.clubDistances.map(\.clubTypeId))
-        return ClubType.allCases.filter { $0.rawValue == club.clubTypeId || !used.contains($0.rawValue) }
-    }
-
-    private func distanceOptions(including value: Int) -> [Int] {
-        var options = Set(stride(from: 0, through: 500, by: 5).map { $0 })
-        options.insert(min(max(value, 0), 500))
-        return options.sorted()
-    }
-
-    private func deleteClub(_ club: ClubDistance) {
-        profile.clubDistances.removeAll { $0.id == club.id }
-    }
-}
-
-private struct RiskProfileScreen: View {
-    @Binding var profile: UserProfile
-
-    var body: some View {
-        Form {
-            Section("Green Risk Preference *") {
-                Picker("Preference", selection: Binding($profile.greenRiskPreference, replacingNilWith: "")) {
-                    Text("Aggressive").tag("Aggressive")
-                    Text("Lag-focused").tag("Lag-focused")
-                    Text("Hybrid").tag("Hybrid")
-                }
-                .pickerStyle(.segmented)
-            }
-
-            Section("Optional Risk Settings") {
-                Picker("Off tee", selection: Binding($profile.riskOffTee, replacingNilWith: "")) {
-                    Text("Not set").tag("")
-                    Text("Aggressive").tag("Aggressive")
-                    Text("Balanced").tag("Balanced")
-                    Text("Conservative").tag("Conservative")
-                }
-                Picker("Around hazards", selection: Binding($profile.riskAroundHazards, replacingNilWith: "")) {
-                    Text("Not set").tag("")
-                    Text("Take it on").tag("Take it on")
-                    Text("Depends").tag("Depends")
-                    Text("Avoid at all costs").tag("Avoid at all costs")
-                }
-            }
-        }
-        .scrollContentBackground(.hidden)
-    }
-}
-
-private struct PuttingTendenciesScreen: View {
-    @Binding var profile: UserProfile
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        Form {
-            Section("Putting Tendencies") {
-                TextField("Open notes", text: Binding($profile.puttingTendencies, replacingNilWith: ""), axis: .vertical)
-                    .lineLimit(3...6)
-                    .focused($isFocused)
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { isFocused = false }
-            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 48)
         }
     }
 }
 
-private struct FinishScreen: View {
-    let profile: UserProfile
+// MARK: - Preview
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Review")
-                    .font(.title3.weight(.semibold))
-                Text("Name: \(profile.firstName) \(profile.lastName ?? "")")
-                Text("Email: \(profile.email)")
-                Text("Green Risk: \(profile.greenRiskPreference ?? "Not set")")
-                Text("Clubs captured: \(profile.clubDistances.count)")
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-        }
-    }
-}
-
-private extension Binding where Value == String {
-    init(_ source: Binding<String?>, replacingNilWith fallback: String) {
-        self.init(
-            get: { source.wrappedValue ?? fallback },
-            set: { source.wrappedValue = $0.isEmpty ? nil : $0 }
-        )
-    }
+#Preview {
+    OnboardingCoordinatorView()
+        .environmentObject(UserProfileStore())
 }

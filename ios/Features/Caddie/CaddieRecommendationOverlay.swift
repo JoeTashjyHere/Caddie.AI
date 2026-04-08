@@ -80,6 +80,19 @@ struct CaddieRecommendationOverlay: View {
         }
         #endif
     }
+
+    private func labeledCaddieRow(title: String, value: String, emphasis: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(GolfTheme.textSecondary)
+            Text(value)
+                .font(emphasis ? .system(size: 28, weight: .bold, design: .rounded) : GolfTheme.bodyFont)
+                .foregroundColor(emphasis ? GolfTheme.grassGreen : GolfTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
     
     private var shotRec: ShotRecommendation? {
         if case .fullShot(let rec) = result { return rec }
@@ -125,9 +138,19 @@ struct CaddieRecommendationOverlay: View {
                 Spacer()
             }
             
-            Text(rec.club)
-                .font(.system(size: 40, weight: .bold, design: .rounded))
-                .foregroundColor(GolfTheme.grassGreen)
+            if let c = rec.caddieStructured {
+                VStack(alignment: .leading, spacing: 10) {
+                    labeledCaddieRow(title: "CLUB", value: c.club, emphasis: true)
+                    labeledCaddieRow(title: "SHOT", value: c.shotType, emphasis: false)
+                    labeledCaddieRow(title: "AIM", value: c.aim, emphasis: false)
+                    labeledCaddieRow(title: "STRATEGY", value: c.strategy, emphasis: false)
+                    labeledCaddieRow(title: "CONFIDENCE", value: c.confidence, emphasis: false)
+                }
+            } else {
+                Text(rec.club)
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundColor(GolfTheme.grassGreen)
+            }
             
             if let ctx = shotContext {
                 Text("\(Int(ctx.distanceToCenter)) yards")
@@ -135,17 +158,19 @@ struct CaddieRecommendationOverlay: View {
                     .foregroundColor(GolfTheme.textSecondary)
             }
             
-            if rec.aimOffsetYards != 0 {
-                let dir = rec.aimOffsetYards > 0 ? "right" : "left"
-                Text("Aim \(String(format: "%.0f", abs(rec.aimOffsetYards))) yards \(dir)")
-                    .font(GolfTheme.bodyFont)
-                    .foregroundColor(GolfTheme.textPrimary)
-            }
-            
-            if !rec.shotShape.isEmpty && rec.shotShape.lowercased() != "straight" {
-                Text("Shot: \(rec.shotShape)")
-                    .font(GolfTheme.bodyFont)
-                    .foregroundColor(GolfTheme.textPrimary)
+            if rec.caddieStructured == nil {
+                if rec.aimOffsetYards != 0 {
+                    let dir = rec.aimOffsetYards > 0 ? "right" : "left"
+                    Text("Aim \(String(format: "%.0f", abs(rec.aimOffsetYards))) yards \(dir)")
+                        .font(GolfTheme.bodyFont)
+                        .foregroundColor(GolfTheme.textPrimary)
+                }
+
+                if !rec.shotShape.isEmpty && rec.shotShape.lowercased() != "straight" {
+                    Text("Shot: \(rec.shotShape)")
+                        .font(GolfTheme.bodyFont)
+                        .foregroundColor(GolfTheme.textPrimary)
+                }
             }
             
             Text(rec.narrative)

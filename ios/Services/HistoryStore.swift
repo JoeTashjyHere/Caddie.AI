@@ -64,6 +64,18 @@ final class HistoryStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
     }
 
+    /// Delete a single recommendation from history
+    func delete(_ item: HistoryItem) {
+        items.removeAll { $0.id == item.id }
+        save()
+    }
+
+    /// Delete a recommendation by its ID
+    func deleteById(_ id: UUID) {
+        items.removeAll { $0.id == id }
+        save()
+    }
+
     func upsertFeedback(for recommendationId: String, feedback: RecommendationFeedbackRecord) {
         guard !recommendationId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard let index = items.firstIndex(where: { $0.recommendationId == recommendationId }) else { return }

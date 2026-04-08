@@ -3,9 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Caddie.AI uses your location to suggest nearby golf courses.</string>
+	<string>Caddie.AI uses your location to provide live distance-to-target and automatic hole detection during your round.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Caddie.AI uses your location to suggest nearby golf courses.</string>
+	<string>Caddie.AI uses your location to keep distance-to-target accurate even when your screen is locked during a round.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
-

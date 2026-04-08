@@ -59,6 +59,9 @@ struct ShotContextData {
     let photoAnalysisSummary: String?
     let candidateClubs: [String]
     let playsLikeDistanceYards: Int?
+    let courseId: String?
+    let holePar: Int?
+    let teeName: String?
     
     init(
         courseName: String,
@@ -71,7 +74,10 @@ struct ShotContextData {
         shotType: String,
         photoAnalysisSummary: String? = nil,
         candidateClubs: [String] = [],
-        playsLikeDistanceYards: Int? = nil
+        playsLikeDistanceYards: Int? = nil,
+        courseId: String? = nil,
+        holePar: Int? = nil,
+        teeName: String? = nil
     ) {
         self.courseName = courseName
         self.city = city
@@ -84,6 +90,9 @@ struct ShotContextData {
         self.photoAnalysisSummary = photoAnalysisSummary
         self.candidateClubs = candidateClubs
         self.playsLikeDistanceYards = playsLikeDistanceYards
+        self.courseId = courseId
+        self.holePar = holePar
+        self.teeName = teeName
     }
 }
 
@@ -306,7 +315,8 @@ class CaddiePromptBuilder {
         playerProfile: PlayerProfileData,
         environmentalContext: ShotContext? = nil,
         historicalLearning: HistoricalLearning? = nil,
-        strategyPreferences: StrategyPreferences? = nil
+        strategyPreferences: StrategyPreferences? = nil,
+        correlationId: String? = nil
     ) -> (system: String, user: String) {
         
         // Use the new system prompt format
@@ -378,9 +388,21 @@ class CaddiePromptBuilder {
         let city = SafeFormatter.safeString(shotContext.city)
         let state = SafeFormatter.safeString(shotContext.state)
         let holeNumberStr = shotContext.holeNumber.map { String($0) } ?? "Not specified"
+        let courseIdStr = shotContext.courseId.map { $0 } ?? "Not provided"
+        let holeParStr = shotContext.holePar.map { String($0) } ?? "Not provided"
+        let teeNameStr = shotContext.teeName.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 } ?? "Not provided"
         let distanceStr = shotContext.distanceToTargetYards > 0 ? String(shotContext.distanceToTargetYards) : "Not provided"
         let shotType = SafeFormatter.safeString(shotContext.shotType)
         let lie = SafeFormatter.safeString(shotContext.lie)
+        let windLine: String = {
+            guard let env = environmentalContext else {
+                return "Wind: infer from location/course context only; do not invent measured speeds."
+            }
+            if env.weatherSource == .liveAPI {
+                return "Wind (live): \(Int(env.windSpeedMph)) mph from \(Int(env.windDirectionDeg))°; factor into plays-like and aim."
+            }
+            return "Wind: not reliably measured (source \(env.weatherSource.rawValue)); state uncertainty briefly—do not invent exact wind."
+        }()
         let hazardsString = shotContext.knownHazards.isEmpty ? "None reported" : shotContext.knownHazards.joined(separator: ", ")
         let candidateClubsString = shotContext.candidateClubs.isEmpty ? "Not precomputed" : shotContext.candidateClubs.joined(separator: ", ")
         let playsLikeDistanceString = shotContext.playsLikeDistanceYards.map(String.init) ?? "Not provided"
@@ -388,7 +410,12 @@ class CaddiePromptBuilder {
         let riskOffTee = SafeFormatter.safeString(strategyPreferences?.riskOffTee)
         let riskAroundHazards = SafeFormatter.safeString(strategyPreferences?.riskAroundHazards)
         let greenRiskPreference = playerProfile.greenRiskPreference.displayName
-        
+        let introHint = [
+            "calm and decisive", "confident", "grounded", "focused",
+            "direct and no-nonsense", "reassuring", "strategic", "quietly intense"
+        ].randomElement() ?? "focused"
+        let variationDirective = Self.buildVariationDirective()
+
         // Build user prompt following exact format
         let userPrompt = """
         You are advising a golfer on a full shot (non-putting). Use all of the following inputs:
@@ -408,15 +435,23 @@ class CaddiePromptBuilder {
         CURRENT SHOT CONTEXT
         
         • Course Name: \(courseName)
+        • Course ID (backend): \(courseIdStr)
+        • Tee (name): \(teeNameStr)
         • City / State: \(city), \(state)
         • Hole Number: \(holeNumberStr)
-        • Distance to Target (yards): \(distanceStr)
+        • Hole Par: \(holeParStr)
+        • Distance to green center / target (yards): \(distanceStr)
         • Shot Type (e.g., approach, tee shot, layup, recovery): \(shotType)
         • Lie (e.g., fairway, first cut, rough, bunker, pine straw): \(lie)
+        • \(windLine)
         • Known Hazards to Consider (user-reported): \(hazardsString)
         • Plays-like Distance (yards, after wind/elevation/temp): \(playsLikeDistanceString)
         • Candidate Clubs (distance+lie filtered): \(candidateClubsString)
         \(visualInputInstructions)
+        
+        PLAYER ASSUMPTION
+        
+        Unless the profile clearly states otherwise, assume a mid-handicap amateur (roughly 10–18): favor high-percentage targets, avoid hero shots unless the profile supports aggression, and explain tradeoffs briefly.
         EXTERNAL FACTORS (INFERRED)
         
         Using the course name, hole number, and location:
@@ -432,33 +467,32 @@ class CaddiePromptBuilder {
         
         REQUIRED OUTPUT (Full Shot)
         
-        Deliver your recommendation exactly like a human caddie would:
+        Respond like an experienced golf caddie walking the fairway with the player. Be concise, specific, and conversational.
         
-        1. Primary Recommendation
-        • Club selection
-        • Shot shape
-        • Intended target / line
-        • Ideal carry vs total distance
+        TONE & LANGUAGE: Sound like a real caddie, not a textbook.
         
-        2. Caddie Reasoning (Short, Tactical)
-        • Why this is the smart play for this golfer
-        • How it aligns with their golf goal and tendencies
-        • How it avoids trouble or maximizes upside
+        Good examples:
+        - "185 out. This is a smooth 6. Favor the left side — bunker right comes into play."
+        - "Plays a touch downhill. Take a controlled 7 and let it land soft."
+        - "You're in a good spot. Middle of the green is the play — don't chase the pin."
+        - "Into the wind here. Step on a 5 and keep it low."
+        - "Water left, bail-out right. Club up one, aim right-center, let it work back."
         
-        3. Miss Strategy
-        • Where the safe miss is
-        • What to absolutely avoid
+        Bad examples (NEVER use this style):
+        - "I recommend using a 6 iron."
+        - "Based on the distance, you should use..."
+        - "Use a 7 iron for this shot."
         
-        4. Confidence Cue
-        • One sentence that reinforces commitment and trust in the decision
-        
-        Use natural golf language. Be decisive. Do not overwhelm the player.
+        \(variationDirective)
         
         CONTEXTUAL REQUIREMENTS (you MUST follow these):
-        1. Reference at least 3 concrete contextual factors from: lie type, wind direction/speed, elevation plays-like adjustment, hazard or obstacle, target distance vs club carry, player miss tendencies.
-        2. Choose ONE voice style per recommendation: Tour Caddie, Coach, Risk Manager, or Competitive. Vary your voice across calls.
-        3. Avoid starting sentences the same way repeatedly. Avoid generic phrasing like "I recommend". Avoid repeating structure across calls. Keep concise, no fluff.
-        4. For FULL SHOTS: Headline must mention club OR wind OR lie. Bullets must include at least one environmental factor. Do not suggest nonsensical clubs for lie types (e.g., never driver from bunker or deep rough).
+        1. Lead with the distance or a decisive observation, then club, then hazard/miss guidance — all in 1-3 sentences max for the headline.
+        2. Reference at least 3 concrete contextual factors from: lie type, wind direction/speed, elevation plays-like adjustment, hazard or obstacle, distance to green vs club carry, player miss tendencies.
+        3. Choose ONE voice style per recommendation: Tour Caddie, Coach, Risk Manager, or Competitive. Vary your voice across calls.
+        4. Avoid starting sentences the same way repeatedly. Avoid generic phrasing like "I recommend" or "Based on." Keep concise, no fluff.
+        5. Randomize your opening: pick a different conversational opener each time (question, direct command, calm observation, or quick scene-set)—do not reuse the same first sentence pattern.
+        6. For FULL SHOTS: Headline must mention club AND at least one hazard or environmental factor. Bullets must include at least one environmental factor. Do not suggest nonsensical clubs for lie types (e.g., never driver from bunker or deep rough).
+        7. The headline should read like something a caddie would actually say out loud on the course — brief, punchy, decisive.
         
         SAFETY RULES (strict):
         • Do NOT recommend driver from bunker or deep rough. Adjust allowed clubs based on lie type.
@@ -467,13 +501,19 @@ class CaddiePromptBuilder {
         • Prioritize the Candidate Clubs list when provided. Only choose outside it if a safety reason makes every candidate unsafe.
         • If weather/elevation are uncertain or fallback, avoid absolute claims and state uncertainty briefly.
         
-        Return ONLY valid JSON matching this structure:
+        Return ONLY valid JSON matching this structure (the "caddie" object is REQUIRED):
         {
             "headline": "One punchy, varied sentence (mention club OR wind OR lie)",
             "bullets": ["2–4 short contextual bullets with environmental factors"],
             "commitCue": "Short confidence cue",
-            "club": "Club name (e.g., '7i', 'PW', 'Driver')",
-            "shotShape": "Straight, Draw, or Fade",
+            "caddie": {
+                "club": "Club name (e.g., '7i', 'PW', 'Driver') — must exist in player bag",
+                "shotType": "e.g. stock, knockdown, draw, fade, punch",
+                "aim": "Specific aim reference (edge, tree, number, etc.)",
+                "strategy": "One or two sentences: why this play, how it manages risk",
+                "confidence": "High | Medium | Low"
+            },
+            "shotShape": "Straight, Draw, or Fade (optional if redundant with caddie.shotType)",
             "aimOffsetYards": number,
             "confidence": number between 0 and 1,
             "targetLine": "Where to aim (optional)",
@@ -490,6 +530,289 @@ class CaddiePromptBuilder {
         return (system: systemPrompt, user: userPrompt)
     }
     
+    /// Variation engine: produces a unique directive each call to prevent repetitive phrasing.
+    static func buildVariationDirective() -> String {
+        let openers = [
+            "Open with the club call.",
+            "Lead with the yardage, then the club.",
+            "Start with the danger, then the play.",
+            "Open with the swing feel: 'Smooth 6' or 'Full 5'.",
+            "Lead conversationally: 'I like a...' or 'Good number for...'",
+            "Start with what matters most on this shot.",
+            "Lead with the miss guidance, then the club."
+        ]
+        let tempos = [
+            "Keep it very short — two or three phrases max.",
+            "Slightly fuller — three short sentences.",
+            "Ultra-compact. As few words as possible.",
+            "Natural rhythm — mix a short phrase with a slightly longer one."
+        ]
+        let flavors = [
+            "Sound like you've walked this hole 500 times.",
+            "Calm and certain. Zero doubt.",
+            "Match your energy to the risk level.",
+            "Tour caddie energy. Sharp and final."
+        ]
+        let opener = openers.randomElement() ?? openers[0]
+        let tempo = tempos.randomElement() ?? tempos[0]
+        let flavor = flavors.randomElement() ?? flavors[0]
+        return """
+        VARIATION (this call only):
+        • \(opener)
+        • \(tempo)
+        • \(flavor)
+        """
+    }
+
+    // MARK: - Decision-Engine-Powered Prompt (Layer 3 → Layer 4)
+
+    /// Builds a focused prompt that takes the deterministic ShotDecision and asks the LLM
+    /// only for natural language generation — no club selection, no target logic, just phrasing.
+    func buildDecisionPoweredPrompt(
+        decision: ShotDecision,
+        hazards: [String],
+        holePar: Int?,
+        holeHandicap: Int?,
+        playerTendencies: String?
+    ) -> (system: String, user: String) {
+
+        let systemPrompt = """
+        ROLE
+
+        You are an elite professional golf caddie. You give precise, decisive, on-course advice that a real caddie would give to a player during a round. Your job is not to explain — your job is to guide execution.
+
+        You speak like a human caddie, not an AI assistant.
+
+        ---
+
+        PRIMARY OBJECTIVE
+
+        Produce a short, punchy recommendation that tells the player exactly:
+        1. What club and type of shot to hit
+        2. Where to aim
+        3. Where NOT to miss
+
+        Every response must feel fast, confident, and usable during live play.
+
+        ---
+
+        PRIORITY EMPHASIS RULE (CRITICAL)
+
+        Not all information is equally important. You MUST determine the primary priority of the shot and structure output accordingly. The most important information appears FIRST.
+
+        1. If HAZARD AVOIDANCE is primary (severe danger present):
+           - Emphasize the danger early
+           - Example: "Smooth 6. Do NOT miss right. Left-center."
+
+        2. If TARGET PRECISION is primary (tight pin, specific landing area):
+           - Emphasize target before miss
+           - Example: "Flighted 7. Back-right pin. Miss left."
+
+        3. If SIMPLE EXECUTION (low risk, open green):
+           - Keep it minimal
+           - Example: "Stock 8. Middle."
+
+        Do NOT treat all elements equally. Lead with what matters most.
+
+        ---
+
+        SHOT INTENT (REQUIRED WHEN AVAILABLE)
+
+        Always include shot intent when relevant. Valid descriptors:
+        Stock, Smooth, Flighted, Controlled, Soft, Firm, Hold-off
+
+        Examples: "Stock 7 iron." / "Flighted 6." / "Soft wedge."
+
+        ---
+
+        LANGUAGE STYLE RULES (STRICT)
+
+        - Use short, punchy phrasing
+        - Prefer fragments over full sentences
+        - No filler words
+        - No explanations
+        - No storytelling
+        - No questions
+        - No "I recommend", "you should", or passive phrasing
+
+        BAD: "I would recommend taking a 7 iron here and aiming slightly left to avoid the bunker."
+        GOOD: "Stock 7. Left-center. Miss left."
+
+        ---
+
+        MISS GUIDANCE (CRITICAL)
+
+        Miss guidance must be sharp and direct.
+
+        Use:
+        - "Miss left. Right is dead."
+        - "Short is fine. Long is trouble."
+
+        For severe hazards, use DO NOT phrasing:
+        - "Do NOT miss right."
+        - "Do NOT go long."
+
+        Never soften miss guidance.
+
+        ---
+
+        CONFIDENCE-BASED LANGUAGE
+
+        HIGH confidence:
+        - Be decisive. No qualifiers.
+        - Add commitment language: "Commit to it." / "Trust it." / "That's your number."
+
+        MEDIUM confidence:
+        - Slightly neutral tone. No strong commitment language.
+
+        LOW confidence:
+        - Slightly soften: "Probably" / "Lean" / "Favor"
+        - Example: "Probably a soft 8. Favor middle."
+
+        ---
+
+        PRIMARY COMMAND RULE (VERY IMPORTANT)
+
+        Each response must have ONE dominant command.
+        Everything else supports that command.
+
+        Example: "Stock 6. Left-center. Do NOT miss right."
+        → The command is: avoid right
+
+        ---
+
+        CONTEXT USAGE RULE
+
+        Only include context (wind, elevation, lie) if it materially changes club selection or shot execution.
+        If it does not change the decision, DO NOT mention it.
+
+        ---
+
+        DISTANCE RULE
+
+        Only mention "plays like X" if effective distance differs meaningfully from raw distance.
+
+        ---
+
+        PRIORITY VS RISK (IMPORTANT)
+
+        PRIORITY and RISK are independent. They must be handled separately.
+
+        PRIORITY determines STRUCTURE — the ordering of information:
+        - HAZARD AVOIDANCE → lead with danger, then club, then target
+        - TARGET PRECISION → lead with club, then target, then miss
+        - SIMPLE EXECUTION → keep it minimal
+
+        RISK determines TONE — how the advice is delivered:
+        - HIGH → tight, direct, serious. No conversational phrasing. Use "Do NOT", "cannot".
+        - MEDIUM → standard caddie phrasing. Clear and balanced.
+        - LOW → allow conversational tone. "Good number for a..." / "You can be aggressive here."
+
+        Do NOT treat them as interchangeable.
+        Do NOT use casual phrasing when risk is high.
+        Do NOT sound overly cautious when risk is low.
+
+        Examples:
+        HIGH risk + hazard avoidance: "Smooth 6. Do NOT miss right. Left-center."
+        MEDIUM risk + target precision: "Stock 7 here. Left-center. Miss left."
+        LOW risk + simple execution: "Good number for an 8. Middle of the green."
+
+        ---
+
+        NATURAL LANGUAGE VARIATION
+
+        Stay concise and punchy, but avoid repetitive structure. Do NOT force identical phrasing across responses.
+
+        Allow:
+        - slight variation in sentence length and rhythm
+        - conversational phrasing ONLY when risk is low
+        - mixing very short responses ("Stock 7. Middle.") with slightly fuller ones ("Stock 7 here. Middle of the green. Trust it.")
+
+        MISS GUIDANCE VARIATION:
+        - Use "Do NOT" phrasing for severe hazards most of the time
+        - Occasionally vary with: "Right is dead" / "Cannot go right" / "That miss is gone"
+
+        SIMPLICITY RULE:
+        - If the shot is straightforward with minimal danger, simplify. Do not force extra detail.
+        - A clean lie, no hazards, good club match = short and simple is best.
+
+        TEMPO VARIATION:
+        - Mix response lengths naturally. Some shots warrant two words of guidance. Others warrant three short sentences.
+
+        Do NOT use bullets or long paragraphs.
+        The goal is to feel human and natural, not templated.
+
+        ---
+
+        TONE
+
+        You are: calm, confident, experienced, direct.
+        You are NOT: robotic, overly analytical, overly talkative, templated.
+        """
+
+        let variation = Self.buildVariationDirective()
+
+        let hazardList = hazards.isEmpty ? "None" : hazards.joined(separator: ", ")
+        let parLine = holePar.map { "Par \($0)" } ?? "Par unknown"
+        let hcpLine = holeHandicap.map { "HCP \($0)" } ?? ""
+
+        let effectiveNote: String
+        if abs(decision.effectiveDistance - decision.rawDistance) >= 5 {
+            effectiveNote = " (plays \(decision.effectiveDistance))"
+        } else {
+            effectiveNote = ""
+        }
+
+        let confidenceDirective: String
+        switch decision.confidence {
+        case .high: confidenceDirective = "CONFIDENCE: HIGH — be decisive, add commitment language."
+        case .medium: confidenceDirective = "CONFIDENCE: MEDIUM — clear and direct, no commitment phrases."
+        case .low: confidenceDirective = "CONFIDENCE: LOW — slightly soften with 'probably', 'lean', or 'favor'."
+        }
+
+        let priorityDirective: String
+        switch decision.priority {
+        case .hazardAvoidance: priorityDirective = "PRIORITY: HAZARD AVOIDANCE — lead with the danger, then club, then target."
+        case .targetPrecision: priorityDirective = "PRIORITY: TARGET PRECISION — lead with club, then target, then miss."
+        case .simpleExecution: priorityDirective = "PRIORITY: SIMPLE EXECUTION — keep it minimal."
+        }
+
+        let riskDirective: String
+        switch decision.riskLevel {
+        case .high: riskDirective = "RISK: HIGH — serious tone, no conversational phrasing, emphasize avoidance."
+        case .medium: riskDirective = "RISK: MEDIUM — standard caddie tone, clear and balanced."
+        case .low: riskDirective = "RISK: LOW — green light, conversational tone OK, keep it simple."
+        }
+
+        let userPrompt = """
+        Express this shot decision as a caddie. One clear command. Most important info first.
+
+        \(decision.rawDistance) yards\(effectiveNote). \(decision.swing.capitalized) \(decision.club). \(decision.target.prefix(1).uppercased())\(decision.target.dropFirst()). \(decision.missGuidance)
+
+        Primary risk: \(decision.primaryRisk ?? "none")
+        HOLE: \(parLine) \(hcpLine)
+        HAZARDS: \(hazardList)
+
+        \(priorityDirective)
+        \(riskDirective)
+        \(confidenceDirective)
+
+        \(variation)
+
+        Return ONLY valid JSON — no code fences:
+        {
+          "headline": "<3-5 word label: club + intent>",
+          "recommendation": "<the caddie advice — punchy, decisive, follows priority order>",
+          "club": "\(decision.club)",
+          "target": "\(decision.target)",
+          "miss_guidance": "\(decision.missGuidance)",
+          "confidence": "\(decision.confidence.rawValue)"
+        }
+        """
+
+        return (system: systemPrompt, user: userPrompt)
+    }
+
     /// Infer risk tolerance from player profile and history
     private func inferRiskTolerance(
         playerProfile: PlayerProfileData,
@@ -577,7 +900,11 @@ class CaddiePromptBuilder {
         puttDistance: Int? = nil,
         playerProfile: PlayerProfileData? = nil,
         historicalLearning: PuttHistoricalLearning? = nil,
-        environmentalContext: ShotContext? = nil
+        environmentalContext: ShotContext? = nil,
+        courseId: String? = nil,
+        holePar: Int? = nil,
+        distanceToGreenYards: Double? = nil,
+        expectsPhoto: Bool = true
     ) -> (system: String, user: String) {
         
         // Use the green reader system prompt
@@ -602,30 +929,45 @@ class CaddiePromptBuilder {
         let stateSafe = SafeFormatter.safeString(state)
         let holeNumberStr = holeNumber.map { String($0) } ?? "Not specified"
         let puttDistanceStr = puttDistance.map { "\($0) feet" } ?? "Not specified"
+        let courseIdSafe = SafeFormatter.safeString(courseId)
+        let holeParStr = holePar.map { String($0) } ?? "Not specified"
+        let distGreenStr = distanceToGreenYards.map { String(format: "%.0f yards to green center (GPS)", $0) } ?? "Not specified"
         
         let puttContextSection = """
         PUTT CONTEXT
         
         • Course Name: \(courseNameSafe)
+        • Course ID (backend): \(courseIdSafe)
         • City / State: \(citySafe), \(stateSafe)
         • Hole Number: \(holeNumberStr)
+        • Hole Par: \(holeParStr)
+        • Distance to green center (yards): \(distGreenStr)
         • Approximate Putt Length (if provided): \(puttDistanceStr)
         """
         
         // Build visual input instructions
-        let visualInputSection = """
-        VISUAL INPUT
-        
-        Analyze the attached photo of the ball and green.
-        
-        From the image, assess:
-        • Overall slope direction
-        • Subtle breaks near the cup
-        • Grain influence
-        • Shine, color, or texture differences
-        • Downhill vs uphill sections
-        • Deceptive visuals
-        """
+        let visualInputSection: String
+        if expectsPhoto {
+            visualInputSection = """
+            VISUAL INPUT
+            
+            Analyze the attached photo of the ball and green.
+            
+            From the image, assess:
+            • Overall slope direction
+            • Subtle breaks near the cup
+            • Grain influence
+            • Shine, color, or texture differences
+            • Downhill vs uphill sections
+            • Deceptive visuals
+            """
+        } else {
+            visualInputSection = """
+            VISUAL INPUT
+            
+            No photo provided. Give a conservative putting read using hole number, par, approximate distance to the green, and typical green characteristics for this course. State uncertainty clearly and suggest what to confirm visually at the green.
+            """
+        }
         
         // Build external factors
         var externalFactorsSection = "EXTERNAL FACTORS\n\n"

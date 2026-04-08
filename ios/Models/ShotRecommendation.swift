@@ -5,11 +5,47 @@
 
 import Foundation
 
+/// Structured caddie output (mandatory JSON block from recommender).
+struct CaddieRecommendation: Codable, Equatable {
+    var club: String
+    var shotType: String
+    var aim: String
+    var strategy: String
+    var confidence: String
+
+    enum CodingKeys: String, CodingKey {
+        case club, shotType, aim, strategy, confidence
+    }
+
+    init(
+        club: String,
+        shotType: String,
+        aim: String,
+        strategy: String,
+        confidence: String
+    ) {
+        self.club = club
+        self.shotType = shotType
+        self.aim = aim
+        self.strategy = strategy
+        self.confidence = confidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        club = try c.decodeIfPresent(String.self, forKey: .club) ?? "—"
+        shotType = try c.decodeIfPresent(String.self, forKey: .shotType) ?? "—"
+        aim = try c.decodeIfPresent(String.self, forKey: .aim) ?? "—"
+        strategy = try c.decodeIfPresent(String.self, forKey: .strategy) ?? "—"
+        confidence = try c.decodeIfPresent(String.self, forKey: .confidence) ?? "Medium"
+    }
+}
+
 /// New structured output format from AI (matches the prompt builder output format)
 struct StructuredShotRecommendation: Codable {
     // Legacy keys (optional for new schema compatibility)
     let clubRecommendation: String?
-    let shotShape: String
+    let shotShape: String?
     let targetLine: String?
     let idealCarryYards: Int?
     let idealTotalYards: Int?
@@ -26,6 +62,9 @@ struct StructuredShotRecommendation: Codable {
     let club: String?
     let aimOffsetYards: Double?
     let confidence: Double?
+
+    /// Nested `caddie` object from recommender JSON (club, shotType, aim, strategy, confidence).
+    let caddie: CaddieRecommendation?
     
     // Legacy fields for backward compatibility (optional)
     let shotPlan: String?
@@ -46,6 +85,12 @@ struct StructuredShotRecommendation: Codable {
     /// Effective aim offset (new or default)
     var effectiveAimOffsetYards: Double {
         aimOffsetYards ?? 0.0
+    }
+
+    /// Shot shape from JSON or sensible default for display and club normalization.
+    var effectiveShotShape: String {
+        let t = shotShape?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? "Straight" : t
     }
 }
 
@@ -70,6 +115,9 @@ struct ShotRecommendation: Codable, Identifiable {
     var missToPlayFor: String?
     var confidenceNote: String?
     var tacticalTips: [String]?
+
+    /// Populated when AI returns the `caddie` JSON block.
+    var caddieStructured: CaddieRecommendation?
     
     init(id: UUID = UUID(),
          club: String,
@@ -85,7 +133,8 @@ struct ShotRecommendation: Codable, Identifiable {
          targetLine: String? = nil,
          missToPlayFor: String? = nil,
          confidenceNote: String? = nil,
-         tacticalTips: [String]? = nil) {
+         tacticalTips: [String]? = nil,
+         caddieStructured: CaddieRecommendation? = nil) {
         self.id = id
         self.club = club
         self.aimOffsetYards = aimOffsetYards
@@ -101,23 +150,39 @@ struct ShotRecommendation: Codable, Identifiable {
         self.missToPlayFor = missToPlayFor
         self.confidenceNote = confidenceNote
         self.tacticalTips = tacticalTips
+        self.caddieStructured = caddieStructured
     }
     
     /// Convert from new structured format
     init(from structured: StructuredShotRecommendation) {
         self.id = UUID()
-        self.club = structured.effectiveClub
+        self.narrative = ""
+        if let c = structured.caddie {
+            self.caddieStructured = c
+            self.club = c.club.isEmpty ? structured.effectiveClub : c.club
+            self.shotShape = structured.effectiveShotShape
+            self.confidence = Self.confidenceNumeric(from: c.confidence, fallback: structured.effectiveConfidence)
+            self.narrative = [
+                "\(c.club) — \(c.shotType)",
+                "Aim: \(c.aim)",
+                "Strategy: \(c.strategy)",
+                "Confidence: \(c.confidence)"
+            ].joined(separator: "\n")
+        } else {
+            self.caddieStructured = nil
+            self.club = structured.effectiveClub
+            self.shotShape = structured.effectiveShotShape
+            self.confidence = structured.effectiveConfidence
+        }
         self.aimOffsetYards = structured.effectiveAimOffsetYards
-        self.shotShape = structured.shotShape
-        self.confidence = structured.effectiveConfidence
         
         // Store new optional fields when present
         self.headline = structured.headline
         self.bullets = structured.bullets ?? []
         self.commitCue = structured.commitCue ?? structured.confidenceCue
         
-        // Build narrative: prefer structured fields when present, else fallback to legacy format
-        if let headline = structured.headline, !headline.isEmpty {
+        // Build narrative when no nested caddie block
+        if structured.caddie == nil, let headline = structured.headline, !headline.isEmpty {
             var narrativeParts: [String] = [headline]
             if let bullets = structured.bullets, !bullets.isEmpty {
                 narrativeParts.append(contentsOf: bullets)
@@ -127,7 +192,7 @@ struct ShotRecommendation: Codable, Identifiable {
                 narrativeParts.append(cue)
             }
             self.narrative = narrativeParts.joined(separator: "\n")
-        } else if let reasoning = structured.caddieReasoning, !reasoning.isEmpty {
+        } else if structured.caddie == nil, let reasoning = structured.caddieReasoning, !reasoning.isEmpty {
             // Fallback to legacy narrative format
             var narrativeParts: [String] = []
             narrativeParts.append("Club: \(structured.effectiveClub)")
@@ -148,8 +213,8 @@ struct ShotRecommendation: Codable, Identifiable {
                 narrativeParts.append(cue)
             }
             self.narrative = narrativeParts.joined(separator: "\n")
-        } else {
-            self.narrative = "\(structured.effectiveClub) – \(structured.shotShape)"
+        } else if structured.caddie == nil {
+            self.narrative = "\(structured.effectiveClub) – \(structured.effectiveShotShape)"
         }
         
         self.avoidZones = []
@@ -158,6 +223,15 @@ struct ShotRecommendation: Codable, Identifiable {
         self.missToPlayFor = structured.missToPlayFor ?? structured.missStrategy
         self.confidenceNote = structured.confidenceNote ?? structured.confidenceCue
         self.tacticalTips = structured.tacticalTips
+    }
+
+    private static func confidenceNumeric(from band: String, fallback: Double) -> Double {
+        switch band.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high": return 0.9
+        case "medium": return 0.65
+        case "low": return 0.45
+        default: return fallback
+        }
     }
 }
 

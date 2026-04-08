@@ -43,14 +43,26 @@ struct ContentView: View {
                 }
                 .tag(0)
 
+            PlayView()
+                .environmentObject(locationService)
+                .environmentObject(profileViewModel)
+                .environmentObject(scoreTrackingService)
+                .environmentObject(feedbackService)
+                .environmentObject(historyStore)
+                .tabItem {
+                    Label("Play", systemImage: "flag.fill")
+                }
+                .tag(1)
+
             HistoryView()
                 .environmentObject(scoreTrackingService)
                 .environmentObject(profileViewModel)
                 .environmentObject(historyStore)
+                .environmentObject(feedbackService)
                 .tabItem {
-                    Label("History", systemImage: "clock.arrow.circlepath")
+                    Label("History", systemImage: "chart.bar.xaxis")
                 }
-                .tag(1)
+                .tag(2)
 
             ProfileView()
                 .environmentObject(profileViewModel)
@@ -58,7 +70,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("Profile", systemImage: "person.fill")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(GolfTheme.grassGreen)
         .onAppear {

@@ -29,25 +29,40 @@ class CourseViewModel: ObservableObject {
     
     private let apiService = APIService.shared
     var searchText: String = ""
-    
-    // Computed property for displayed courses (either search results or nearby)
+
+    /// 3-level hierarchy: Club → Course → Tee, built from the flat courses list.
+    var clubs: [GolfClub] {
+        let courses = !searchText.isEmpty ? searchResults : nearbyCourses
+        let sorted = sortByDistance(courses: courses)
+        return GolfClub.buildHierarchy(from: sorted)
+    }
+
+    /// One representative course per club for map annotations.
+    var uniqueClubCourses: [Course] {
+        var seen = Set<String>()
+        var result: [Course] = []
+        let courses = !searchText.isEmpty ? searchResults : nearbyCourses
+        for c in sortByDistance(courses: courses) {
+            let key = c.displayName
+            if seen.insert(key).inserted { result.append(c) }
+        }
+        return result
+    }
+
     func displayedCourses(searchText: String = "") -> [Course] {
         let courses: [Course]
-        
+
         if !searchText.isEmpty {
-            // Use search results
             courses = searchResults
         } else {
-            // Use nearby courses
             courses = nearbyCourses
         }
-        
+
         switch sortOption {
         case .closestFirst:
             return sortByDistance(courses: courses)
         case .highestRated:
-            // Future: Sort by rating when rating field is added to Course model
-            return courses // For now, just return as-is
+            return courses
         }
     }
     
@@ -131,7 +146,9 @@ class CourseViewModel: ObservableObject {
     func selectCourse(_ course: Course) {
         currentCourse = course
         selectedCourseId = course.id
-        // Persist selection
+        #if DEBUG
+        print("[COURSE] Selected course: \(course.displayName) (\(course.courseLabel ?? "-")) | courseId: \(course.id)")
+        #endif
         if let encoded = try? JSONEncoder().encode(course) {
             UserDefaults.standard.set(encoded, forKey: "CurrentCourse")
         }
@@ -140,8 +157,15 @@ class CourseViewModel: ObservableObject {
     func loadCurrentCourse() {
         if let data = UserDefaults.standard.data(forKey: "CurrentCourse"),
            let course = try? JSONDecoder().decode(Course.self, from: data) {
-            currentCourse = course
-            selectedCourseId = course.id
+            if course.hasValidBackendId {
+                currentCourse = course
+                selectedCourseId = course.id
+            } else {
+                #if DEBUG
+                print("[COURSE] Invalid cached courseId detected, clearing: \(course.id)")
+                #endif
+                UserDefaults.standard.removeObject(forKey: "CurrentCourse")
+            }
         }
     }
     

@@ -85,6 +85,15 @@ struct UserProfile: Codable, Equatable {
     var clubDistances: [ClubDistance]
     var shotPreferencesByClub: [String: String]?
 
+    var distanceUnit: String?
+    var temperatureUnit: String?
+    var handedness: String?
+    var skillLevel: String?
+    var shotShape: String?
+    var strategyType: String?
+    var courseType: String?
+    var windSensitivity: String?
+
     init(
         firstName: String = "",
         lastName: String? = nil,
@@ -99,7 +108,15 @@ struct UserProfile: Codable, Equatable {
         greenRiskPreference: String? = nil,
         puttingTendencies: String? = nil,
         clubDistances: [ClubDistance] = [],
-        shotPreferencesByClub: [String: String]? = nil
+        shotPreferencesByClub: [String: String]? = nil,
+        distanceUnit: String? = nil,
+        temperatureUnit: String? = nil,
+        handedness: String? = nil,
+        skillLevel: String? = nil,
+        shotShape: String? = nil,
+        strategyType: String? = nil,
+        courseType: String? = nil,
+        windSensitivity: String? = nil
     ) {
         self.firstName = firstName
         self.lastName = lastName
@@ -115,5 +132,13 @@ struct UserProfile: Codable, Equatable {
         self.puttingTendencies = puttingTendencies
         self.clubDistances = clubDistances
         self.shotPreferencesByClub = shotPreferencesByClub
+        self.distanceUnit = distanceUnit
+        self.temperatureUnit = temperatureUnit
+        self.handedness = handedness
+        self.skillLevel = skillLevel
+        self.shotShape = shotShape
+        self.strategyType = strategyType
+        self.courseType = courseType
+        self.windSensitivity = windSensitivity
     }
 }

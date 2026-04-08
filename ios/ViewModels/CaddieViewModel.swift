@@ -127,66 +127,60 @@ class CaddieViewModel: ObservableObject {
             defer { isDetectingHole = false }
             
             // Fetch hole layout for the course
-            do {
-                // Try to get hole layout from CourseMapperService
-                let courseId = course.id
-                var detectedHole: Int? = nil
-                var minDistance: Double = Double.greatestFiniteMagnitude
-                
-                // Check holes 1-18
-                for holeNumber in 1...18 {
-                    do {
-                        let layoutResponse = try await CourseMapperService.shared.fetchHoleLayout(
-                            courseId: courseId,
-                            holeNumber: holeNumber
+            let courseId = course.id
+            var detectedHole: Int? = nil
+            var minDistance: Double = Double.greatestFiniteMagnitude
+            
+            // Check holes 1-18
+            for holeNumber in 1...18 {
+                do {
+                    let layoutResponse = try await CourseMapperService.shared.fetchHoleLayout(
+                        courseId: courseId,
+                        holeNumber: holeNumber
+                    )
+                    
+                    // Convert to HoleLayout
+                    let holeLayout = HoleLayout(from: layoutResponse)
+                    
+                    // Check distance to green center
+                    if let greenCenter = holeLayout.greenCenter {
+                        let distance = calculateDistance(
+                            from: coordinate,
+                            to: greenCenter
                         )
                         
-                        // Convert to HoleLayout
-                        let holeLayout = HoleLayout(from: layoutResponse)
-                        
-                        // Check distance to green center
-                        if let greenCenter = holeLayout.greenCenter {
+                        // If within 50 yards of green center, consider this the current hole
+                        if distance < 50 && distance < minDistance {
+                            minDistance = distance
+                            detectedHole = holeNumber
+                        }
+                    }
+                    
+                    // Also check if coordinate is within any green polygon
+                    for greenPolygon in holeLayout.greenPolygons {
+                        if isCoordinateInPolygon(coordinate, polygon: greenPolygon) {
                             let distance = calculateDistance(
                                 from: coordinate,
-                                to: greenCenter
+                                to: greenPolygon.points()[0].coordinate
                             )
-                            
-                            // If within 50 yards of green center, consider this the current hole
-                            if distance < 50 && distance < minDistance {
+                            if distance < minDistance {
                                 minDistance = distance
                                 detectedHole = holeNumber
                             }
                         }
-                        
-                        // Also check if coordinate is within any green polygon
-                        for greenPolygon in holeLayout.greenPolygons {
-                            if isCoordinateInPolygon(coordinate, polygon: greenPolygon) {
-                                let distance = calculateDistance(
-                                    from: coordinate,
-                                    to: greenPolygon.points()[0].coordinate
-                                )
-                                if distance < minDistance {
-                                    minDistance = distance
-                                    detectedHole = holeNumber
-                                }
-                            }
-                        }
-                    } catch {
-                        // Hole layout not available, continue to next hole
-                        continue
                     }
+                } catch {
+                    // Hole layout not available, continue to next hole
+                    continue
                 }
-                
-                // If we detected a different hole than current, suggest it
-                if let detectedHole = detectedHole,
-                   detectedHole != session.currentHoleNumber {
-                    await MainActor.run {
-                        self.pendingHoleSuggestion = detectedHole
-                    }
+            }
+            
+            // If we detected a different hole than current, suggest it
+            if let detectedHole = detectedHole,
+               detectedHole != session.currentHoleNumber {
+                await MainActor.run {
+                    self.pendingHoleSuggestion = detectedHole
                 }
-            } catch {
-                // Fail gracefully - auto-hole tracking requires geometry data
-                print("Auto-hole tracking: Unable to fetch hole geometry: \(error)")
             }
         }
     }

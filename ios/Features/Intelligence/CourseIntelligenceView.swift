@@ -63,8 +63,6 @@ struct CourseIntelligenceView: View {
                 if selectedCourse == nil {
                     if let course = courseService.currentCourse {
                         selectedCourse = course
-                    } else {
-                        selectedCourse = courseService.localCourses.first
                     }
                 }
                 
@@ -122,7 +120,7 @@ struct CourseIntelligenceView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         if let course = selectedCourse {
-                            Text(course.name)
+                            Text(course.displayName)
                                 .font(GolfTheme.bodyFont)
                                 .foregroundColor(GolfTheme.textPrimary)
                             if let par = course.par {
@@ -153,26 +151,6 @@ struct CourseIntelligenceView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(GolfTheme.textSecondary.opacity(0.15), lineWidth: 1)
                 )
-            }
-            
-            if !courseService.localCourses.isEmpty {
-                Menu {
-                    ForEach(courseService.localCourses, id: \.id) { course in
-                        Button(course.name) {
-                            selectedCourse = course
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                            impactFeedback.impactOccurred()
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "flag.fill")
-                            .foregroundColor(GolfTheme.accentGold)
-                        Text("Quick select from favorites")
-                            .font(GolfTheme.captionFont)
-                            .foregroundColor(GolfTheme.textSecondary)
-                    }
-                }
             }
             
             if selectedCourse == nil {
@@ -774,7 +752,7 @@ struct HoleDetailView: View {
             return path
         }
         // Use APIService as single source of truth for base URL
-        return APIService.baseURLString + path
+        return APIConfig.baseURLString + path
     }
 }
 

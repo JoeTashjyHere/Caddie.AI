@@ -2,7 +2,9 @@
 //  CourseMapperService.swift
 //  Caddie.ai
 //
-//  Service for calling the course-mapper FastAPI backend
+//  Service for hole layout and course-mapper data.
+//  Uses APIConfig.baseURLString (Render backend). All HTTPS.
+//
 
 import Foundation
 import CoreLocation
@@ -12,14 +14,8 @@ import SwiftUI
 class CourseMapperService: ObservableObject {
     static let shared = CourseMapperService()
     
-    // Base URL for course-mapper API (runs on port 8081)
     private var baseURL: String {
-        #if targetEnvironment(simulator)
-            return "http://localhost:8081"
-        #else
-            // Replace with your Mac's local IP when testing on physical device
-            return "http://192.168.1.151:8081"
-        #endif
+        APIConfig.baseURLString
     }
     
     private init() {}
@@ -31,7 +27,7 @@ class CourseMapperService: ObservableObject {
         lon: Double,
         radiusKm: Double = 10.0
     ) async throws -> [CourseMapperCourse] {
-        let urlString = "\(baseURL)/courses/nearby?lat=\(lat)&lon=\(lon)&radius_km=\(radiusKm)"
+        let urlString = "\(baseURL)/api/courses/nearby?lat=\(lat)&lon=\(lon)&radius_km=\(radiusKm)"
         
         guard let url = URL(string: urlString) else {
             throw CourseMapperError.invalidURL
@@ -56,7 +52,7 @@ class CourseMapperService: ObservableObject {
     // MARK: - Course Holes
     
     func fetchCourseHoles(courseId: String) async throws -> [CourseMapperHole] {
-        let urlString = "\(baseURL)/courses/\(courseId)/holes"
+        let urlString = "\(baseURL)/api/courses/\(courseId)/holes"
         
         guard let url = URL(string: urlString) else {
             throw CourseMapperError.invalidURL
@@ -81,7 +77,7 @@ class CourseMapperService: ObservableObject {
     // MARK: - Hole Layout
     
     func fetchHoleLayout(courseId: String, holeNumber: Int) async throws -> HoleLayoutResponse {
-        let urlString = "\(baseURL)/courses/\(courseId)/holes/\(holeNumber)/layout"
+        let urlString = "\(baseURL)/api/courses/\(courseId)/holes/\(holeNumber)/layout"
         
         guard let url = URL(string: urlString) else {
             throw CourseMapperError.invalidURL
@@ -112,7 +108,7 @@ class CourseMapperService: ObservableObject {
     // MARK: - Green Contours
     
     func fetchGreenContours(courseId: String, holeNumber: Int) async throws -> GreenContourResponse? {
-        let urlString = "\(baseURL)/courses/\(courseId)/holes/\(holeNumber)/green-contours"
+        let urlString = "\(baseURL)/api/courses/\(courseId)/holes/\(holeNumber)/green-contours"
         
         guard let url = URL(string: urlString) else {
             throw CourseMapperError.invalidURL

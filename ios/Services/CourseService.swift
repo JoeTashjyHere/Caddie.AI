@@ -46,86 +46,30 @@ class CourseService: ObservableObject {
     @Published private(set) var currentCourse: Course?
     @Published private(set) var suggestedCourse: Course?
     
-    var localCourses: [Course] {
-        []
-    }
-    
     private let currentCourseKey = "CurrentCourse"
     private let suggestedCourseKey = "SuggestedCourse"
-    private let baseURL: URL
     
     private init() {
-        // Use APIService as single source of truth for base URL
-        self.baseURL = APIService.getBaseURL().appendingPathComponent("api")
         loadCurrentCourse()
     }
     
     func getNearbyCourses(at coordinate: CLLocationCoordinate2D) async throws -> [Course] {
-        // Try Node backend first
-        do {
-            let url = baseURL.appendingPathComponent("courses")
-            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            components?.queryItems = [
-                URLQueryItem(name: "lat", value: String(coordinate.latitude)),
-                URLQueryItem(name: "lon", value: String(coordinate.longitude))
-            ]
-            guard let finalURL = components?.url else { throw CourseError.invalidURL }
-            
-            let (data, response) = try await URLSession.shared.data(for: URLRequest(url: finalURL))
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                print("Node backend returned status \((response as? HTTPURLResponse)?.statusCode ?? -1), trying course-mapper...")
-                return try await getNearbyCoursesFromCourseMapper(at: coordinate)
-            }
-            let coursesResponse = try JSONDecoder().decode(CoursesResponse.self, from: data)
-            return coursesResponse.courses
-        } catch {
-            print("Error fetching nearby courses from Node backend: \(error). Trying course-mapper...")
-            return try await getNearbyCoursesFromCourseMapper(at: coordinate)
-        }
-    }
-    
-    private func getNearbyCoursesFromCourseMapper(at coordinate: CLLocationCoordinate2D) async throws -> [Course] {
-        do {
-            let mapperCourses = try await CourseMapperService.shared.fetchNearbyCourses(
-                lat: coordinate.latitude,
-                lon: coordinate.longitude,
-                radiusKm: 10.0
-            )
-            
-            // Convert CourseMapperCourse to Course
-            return mapperCourses.map { mapperCourse in
-                // Get location from course mapper or use provided coordinate
-                mapperCourse.toCourse(location: coordinate)
-            }
-        } catch {
-            print("Error fetching courses from course-mapper: \(error). Returning empty results.")
-            return []
-        }
+        let courses = try await APIService.shared.fetchNearbyCourses(
+            lat: coordinate.latitude,
+            lon: coordinate.longitude
+        )
+        #if DEBUG
+        print("[COURSE] CourseService.getNearbyCourses returned \(courses.count) live courses")
+        #endif
+        return courses
     }
     
     func searchCourses(query: String, lat: Double? = nil, lon: Double? = nil) async throws -> [Course] {
-        do {
-            let url = baseURL.appendingPathComponent("courses")
-            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            var queryItems = [URLQueryItem(name: "query", value: query)]
-            if let lat = lat, let lon = lon {
-                queryItems.append(URLQueryItem(name: "lat", value: String(lat)))
-                queryItems.append(URLQueryItem(name: "lon", value: String(lon)))
-            }
-            components?.queryItems = queryItems
-            guard let finalURL = components?.url else { throw CourseError.invalidURL }
-            
-            let (data, response) = try await URLSession.shared.data(for: URLRequest(url: finalURL))
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                print("Backend returned status \((response as? HTTPURLResponse)?.statusCode ?? -1), returning empty results")
-                return []
-            }
-            let coursesResponse = try JSONDecoder().decode(CoursesResponse.self, from: data)
-            return coursesResponse.courses
-        } catch {
-            print("Error searching courses from backend: \(error). Returning empty results.")
-            return []
-        }
+        let courses = try await APIService.shared.searchCourses(query: query, lat: lat, lon: lon)
+        #if DEBUG
+        print("[COURSE] CourseService.searchCourses query=\(query) returned \(courses.count) live courses")
+        #endif
+        return courses
     }
     
     func suggestCourse(at coordinate: CLLocationCoordinate2D) async {
@@ -147,6 +91,9 @@ class CourseService: ObservableObject {
     
     func setCurrentCourse(_ course: Course) {
         currentCourse = course
+        #if DEBUG
+        print("[COURSE] CourseService.setCurrentCourse: \(course.displayName) | courseId: \(course.id)")
+        #endif
         saveCurrentCourse()
     }
     
@@ -174,12 +121,26 @@ class CourseService: ObservableObject {
     private func loadCurrentCourse() {
         if let data = UserDefaults.standard.data(forKey: currentCourseKey),
            let course = try? JSONDecoder().decode(Course.self, from: data) {
-            currentCourse = course
+            if course.hasValidBackendId {
+                currentCourse = course
+            } else {
+                #if DEBUG
+                print("[COURSE] Invalid cached courseId detected, clearing: \(course.id)")
+                #endif
+                UserDefaults.standard.removeObject(forKey: currentCourseKey)
+            }
         }
-        
+
         if let data = UserDefaults.standard.data(forKey: suggestedCourseKey),
            let course = try? JSONDecoder().decode(Course.self, from: data) {
-            suggestedCourse = course
+            if course.hasValidBackendId {
+                suggestedCourse = course
+            } else {
+                #if DEBUG
+                print("[COURSE] Invalid cached suggestedCourseId detected, clearing: \(course.id)")
+                #endif
+                UserDefaults.standard.removeObject(forKey: suggestedCourseKey)
+            }
         }
     }
     

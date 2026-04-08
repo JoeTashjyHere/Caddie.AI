@@ -11,29 +11,28 @@ struct PlayView: View {
     @EnvironmentObject var profileViewModel: ProfileViewModel
     @EnvironmentObject var scoreTrackingService: ScoreTrackingService
     @EnvironmentObject var feedbackService: FeedbackService
+    @EnvironmentObject var historyStore: HistoryStore
     @StateObject private var courseViewModel = CourseViewModel()
-    
+
     @State private var showingRoundPlay = false
+    @State private var showingRoundSetup = false
+    @State private var pendingRoundLaunch: RoundPlayLaunchConfig?
     @State private var isRefreshing = false
-    @State private var showSuccessMessage = false
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Selected Course Card with Start Round Button
                     if let selectedCourse = courseViewModel.currentCourse {
                         selectedCourseCard(course: selectedCourse)
                     }
-                    
-                    // Location fallback banner
-                    if locationService.authorizationStatus == .denied || 
+
+                    if locationService.authorizationStatus == .denied ||
                        locationService.authorizationStatus == .restricted ||
                        locationService.authorizationStatus == .notDetermined {
                         locationFallbackBanner
                     }
-                    
-                    // Course List Section
+
                     if courseViewModel.nearbyCoursesState == .loading && courseViewModel.nearbyCourses.isEmpty && !isRefreshing {
                         loadingState
                     } else if shouldShowNearbyCourses {
@@ -52,20 +51,14 @@ struct PlayView: View {
                 await refreshCourses()
             }
             .onAppear {
-                // Defensive redirect: If round is in progress, redirect to RoundPlayView
                 if scoreTrackingService.phase == .inProgress,
                    let currentRound = scoreTrackingService.currentRound {
-                    let course = Course(name: currentRound.courseName, par: currentRound.par)
+                    let course = currentRound.resolvedCourse()
                     courseViewModel.selectCourse(course)
+                    pendingRoundLaunch = nil
                     showingRoundPlay = true
                     return
                 }
-                
-                // Defensive redirect: If course not selected and phase is selecting
-                if scoreTrackingService.phase == .selectingCourse || courseViewModel.currentCourse == nil {
-                    // This will be handled by the "Start Round" button flow
-                }
-                
                 setupPlayView()
             }
             .onChange(of: locationService.coordinate?.latitude) { oldValue, newValue in
@@ -75,14 +68,23 @@ struct PlayView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingRoundSetup) {
+                if let course = courseViewModel.currentCourse {
+                    RoundPlaySetupSheet(course: course) { config in
+                        pendingRoundLaunch = config
+                        scoreTrackingService.setPhase(.inProgress)
+                        showingRoundPlay = true
+                    }
+                }
+            }
             .fullScreenCover(isPresented: $showingRoundPlay) {
-                // Defensive check: Ensure course exists
                 if let course = courseViewModel.currentCourse ?? getCourseFromCurrentRound() {
                     RoundPlayView(
                         course: course,
+                        launchConfig: pendingRoundLaunch,
                         onRoundComplete: {
-                            // Round completed, move to summary phase
                             scoreTrackingService.completeRound()
+                            pendingRoundLaunch = nil
                             showingRoundPlay = false
                         }
                     )
@@ -90,51 +92,48 @@ struct PlayView: View {
                     .environmentObject(profileViewModel)
                     .environmentObject(scoreTrackingService)
                     .environmentObject(feedbackService)
+                    .environmentObject(historyStore)
                 } else {
-                    // No course available, show course selection
                     CourseSelectionView()
                         .environmentObject(courseViewModel)
                         .environmentObject(locationService)
                         .onDisappear {
-                            // After course selection, start round if course selected
-                            if let course = courseViewModel.currentCourse {
+                            if courseViewModel.currentCourse != nil {
                                 scoreTrackingService.setPhase(.selectingCourse)
-                                showingRoundPlay = true
+                                showingRoundSetup = true
                             }
                         }
                 }
             }
-                        }
-                    }
-                
+        }
+    }
+
     // MARK: - Computed Properties
-    
+
     private var shouldShowNearbyCourses: Bool {
         locationService.authorizationStatus == .authorizedWhenInUse ||
         locationService.authorizationStatus == .authorizedAlways
     }
-    
+
     private var shouldShowRecentCourses: Bool {
         !scoreTrackingService.rounds.isEmpty && !shouldShowNearbyCourses
     }
-    
+
     private var recentCourses: [Course] {
         let uniqueCourseNames = Set(scoreTrackingService.rounds.map { $0.courseName })
         return uniqueCourseNames.compactMap { courseName in
-            // Try to find in nearby courses first
             if let course = courseViewModel.nearbyCourses.first(where: { $0.name == courseName }) {
                 return course
             }
-            // Otherwise create a basic course from round data
             if let round = scoreTrackingService.rounds.first(where: { $0.courseName == courseName }) {
                 return Course(name: courseName, par: round.par)
             }
             return nil
         }
     }
-    
+
     // MARK: - Selected Course Card
-    
+
     private func selectedCourseCard(course: Course) -> some View {
         VStack(spacing: 16) {
             HStack {
@@ -142,60 +141,46 @@ struct PlayView: View {
                     Text("Selected Course")
                         .font(GolfTheme.captionFont)
                         .foregroundColor(GolfTheme.textSecondary)
-                    
-                    Text(course.name)
+
+                    Text(course.displayName)
                         .font(GolfTheme.titleFont)
                         .foregroundColor(GolfTheme.textPrimary)
-                    
-                    if let par = course.par {
-                        Text("Par \(par)")
+
+                    if let label = course.courseLabel {
+                        Text(label)
                             .font(GolfTheme.bodyFont)
                             .foregroundColor(GolfTheme.textSecondary)
                     }
+
+                    if let par = course.par {
+                        Text("Par \(par)")
+                            .font(GolfTheme.captionFont)
+                            .foregroundColor(GolfTheme.textSecondary)
+                    }
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     courseViewModel.currentCourse = nil
                     UserDefaults.standard.removeObject(forKey: "CurrentCourse")
-                    withAnimation(.spring(response: 0.3)) {
-                        showSuccessMessage = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation {
-                            showSuccessMessage = false
-                        }
-                    }
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(GolfTheme.textSecondary)
                 }
             }
-            
-            if showSuccessMessage {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(GolfTheme.grassGreen)
-                    Text("Course deselected")
-                        .font(GolfTheme.captionFont)
-                        .foregroundColor(GolfTheme.grassGreen)
-                }
-                .padding(.vertical, 4)
-                .transition(.opacity.combined(with: .scale))
-            }
-            
+
             PrimaryButton(
                 title: "Start Round",
                 action: {
                     withAnimation(.spring(response: 0.3)) {
-                        showingRoundPlay = true
+                        showingRoundSetup = true
                     }
-                                }
-                            )
+                }
+            )
         }
-                            .padding()
+        .padding()
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
@@ -207,22 +192,19 @@ struct PlayView: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
-                            }
-                            
-    // MARK: - Nearby Courses Section
-    
+    }
+
+    // MARK: - Nearby Courses (Club → Course hierarchy)
+
     private var nearbyCoursesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "location.fill")
                     .foregroundColor(GolfTheme.grassGreen)
-                
                 Text("Nearby Courses")
                     .font(GolfTheme.headlineFont)
                     .foregroundColor(GolfTheme.textPrimary)
-                
                 Spacer()
-                
                 if courseViewModel.nearbyCoursesState == .loading {
                     ProgressView()
                         .scaleEffect(0.8)
@@ -230,7 +212,7 @@ struct PlayView: View {
                 }
             }
             .padding(.horizontal)
-            
+
             if courseViewModel.nearbyCourses.isEmpty && courseViewModel.nearbyCoursesState != .loading {
                 VStack(spacing: 12) {
                     Image(systemName: "location.slash")
@@ -239,43 +221,38 @@ struct PlayView: View {
                     Text("No courses found nearby")
                         .font(GolfTheme.bodyFont)
                         .foregroundColor(GolfTheme.textSecondary)
-                                }
+                }
                 .frame(maxWidth: .infinity)
-                            .padding()
+                .padding()
             } else {
-                ForEach(courseViewModel.nearbyCourses) { course in
-                    CourseCard(
-                        course: course,
-                        distance: calculateDistance(to: course),
-                        isSelected: courseViewModel.currentCourse?.id == course.id,
-                        action: {
+                ForEach(courseViewModel.clubs) { club in
+                    PlayClubRow(
+                        club: club,
+                        distance: courseViewModel.distanceString(for: club.courses[0]),
+                        selectedCourseId: courseViewModel.selectedCourseId,
+                        onSelectCourse: { course in
                             selectCourse(course)
-                    }
+                        }
                     )
                     .padding(.horizontal)
                 }
             }
         }
     }
-    
+
     // MARK: - Recent Courses Section
-    
+
     private var recentCoursesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "clock.fill")
                     .foregroundColor(GolfTheme.accentGold)
-                
                 Text("Recently Played")
                     .font(GolfTheme.headlineFont)
                     .foregroundColor(GolfTheme.textPrimary)
-                
                 Spacer()
-                
                 Button(action: {
-                    Task {
-                        await requestLocationAndFetch()
-                }
+                    Task { await requestLocationAndFetch() }
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "location.fill")
@@ -286,23 +263,21 @@ struct PlayView: View {
                 }
             }
             .padding(.horizontal)
-            
+
             ForEach(recentCourses) { course in
-                CourseCard(
+                PlayCourseCard(
                     course: course,
-                    distance: nil, // No distance for recent courses
+                    distance: nil,
                     isSelected: courseViewModel.currentCourse?.id == course.id,
-                    action: {
-                        selectCourse(course)
-                    }
+                    action: { selectCourse(course) }
                 )
                 .padding(.horizontal)
             }
         }
     }
-    
-    // MARK: - Loading State
-    
+
+    // MARK: - States
+
     private var loadingState: some View {
         VStack(spacing: 16) {
             ProgressView()
@@ -315,29 +290,22 @@ struct PlayView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
     }
-    
-    // MARK: - Empty State
-    
+
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "flag.checkered")
                 .font(.system(size: 48))
                 .foregroundColor(GolfTheme.textSecondary)
-            
             Text("No Courses Available")
                 .font(GolfTheme.headlineFont)
                 .foregroundColor(GolfTheme.textPrimary)
-            
             Text("Enable location services to find nearby courses, or play a round to see recent courses here.")
                 .font(GolfTheme.bodyFont)
                 .foregroundColor(GolfTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            
             Button(action: {
-                Task {
-                    await requestLocationAndFetch()
-                }
+                Task { await requestLocationAndFetch() }
             }) {
                 HStack {
                     Image(systemName: "location.fill")
@@ -354,127 +322,84 @@ struct PlayView: View {
         .frame(maxWidth: .infinity)
         .padding()
     }
-    
-    // MARK: - Helper Functions
-    
+
+    // MARK: - Helpers
+
     private func getCourseFromCurrentRound() -> Course? {
-        if let currentRound = scoreTrackingService.currentRound {
-            return Course(name: currentRound.courseName, par: currentRound.par)
-        }
-        return nil
+        scoreTrackingService.currentRound.map { $0.resolvedCourse() }
     }
-    
+
     private func setupPlayView() {
         courseViewModel.loadCurrentCourse()
-        
-        // Request location if needed
         if locationService.authorizationStatus == .notDetermined {
             locationService.requestAuthorization()
         }
-        
-        // Start location updates and fetch courses
         if shouldShowNearbyCourses {
-                locationService.startUpdating()
-            
+            locationService.startUpdating()
             Task {
                 var attempts = 0
                 while locationService.coordinate == nil && attempts < 10 {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     attempts += 1
                 }
-                
                 if let coordinate = locationService.coordinate {
                     await courseViewModel.fetchNearbyCourses(at: coordinate)
                 }
             }
         }
     }
-    
+
     private func refreshCourses() async {
         isRefreshing = true
-        
-        defer {
-            isRefreshing = false
-        }
-        
+        defer { isRefreshing = false }
         if shouldShowNearbyCourses, let coordinate = locationService.coordinate {
             await courseViewModel.fetchNearbyCourses(at: coordinate)
         }
-        
-        // Small delay to show refresh animation
         try? await Task.sleep(nanoseconds: 500_000_000)
     }
-    
+
     private func requestLocationAndFetch() async {
         locationService.requestAuthorization()
-        
-        // Wait for authorization
         var attempts = 0
         while locationService.authorizationStatus == .notDetermined && attempts < 20 {
             try? await Task.sleep(nanoseconds: 200_000_000)
             attempts += 1
         }
-        
         if shouldShowNearbyCourses {
             locationService.startUpdating()
-            
-            // Wait for location
             attempts = 0
             while locationService.coordinate == nil && attempts < 10 {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 attempts += 1
             }
-            
             if let coordinate = locationService.coordinate {
                 await courseViewModel.fetchNearbyCourses(at: coordinate)
             }
         }
     }
-    
+
     private func selectCourse(_ course: Course) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             courseViewModel.selectCourse(course)
-            showSuccessMessage = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                showSuccessMessage = false
-            }
         }
     }
-    
+
     private func calculateDistance(to course: Course) -> Double? {
         guard let userLocation = locationService.coordinate,
-              let courseLocation = course.location?.clLocation else {
-            return nil
-        }
-        
-        let userCLLocation = CLLocation(
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude
-        )
-        let courseCLLocation = CLLocation(
-            latitude: courseLocation.latitude,
-            longitude: courseLocation.longitude
-        )
-        
-        // Distance in meters, convert to miles
-        let distanceMeters = userCLLocation.distance(from: courseCLLocation)
-        let distanceMiles = distanceMeters / 1609.34
-        
-        return distanceMiles
+              let courseLocation = course.location?.clLocation else { return nil }
+        let userCL = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+        let courseCL = CLLocation(latitude: courseLocation.latitude, longitude: courseLocation.longitude)
+        return userCL.distance(from: courseCL) / 1609.34
     }
-    
-    // MARK: - Location Fallback Banner
-    
+
+    // MARK: - Location Fallback
+
     private var locationFallbackBanner: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: "location.slash.fill")
                     .foregroundColor(.orange)
                     .font(.title3)
-                
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Turn on Location")
                         .font(GolfTheme.headlineFont)
@@ -484,21 +409,13 @@ struct PlayView: View {
                         .foregroundColor(GolfTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
                 Spacer()
             }
-            
             Button(action: {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                impactFeedback.impactOccurred()
-                
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 if locationService.authorizationStatus == .denied || locationService.authorizationStatus == .restricted {
-                    // Open iOS Settings
-                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(settingsURL)
-                    }
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                 } else {
-                    // Request authorization
                     locationService.requestAuthorization()
                 }
             }) {
@@ -517,111 +434,196 @@ struct PlayView: View {
         .padding()
         .background(Color.orange.opacity(0.1))
         .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.3), lineWidth: 1))
         .padding(.horizontal)
     }
 }
 
-// MARK: - Course Card Component
+// MARK: - Play Club Row (Club → Course hierarchy for Play tab)
 
-struct CourseCard: View {
+struct PlayClubRow: View {
+    let club: GolfClub
+    let distance: String?
+    let selectedCourseId: String?
+    let onSelectCourse: (Course) -> Void
+
+    @State private var isExpanded = false
+
+    private var hasSingleCourse: Bool { club.courses.count == 1 }
+    private var isSelected: Bool {
+        guard let id = selectedCourseId else { return false }
+        return club.courses.contains { $0.id == id }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button {
+                if hasSingleCourse {
+                    onSelectCourse(club.courses[0])
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        isExpanded.toggle()
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(GolfTheme.grassGreen.opacity(isSelected ? 0.2 : 0.1))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "flag.fill")
+                            .foregroundColor(isSelected ? GolfTheme.grassGreen : GolfTheme.textSecondary)
+                            .font(.system(size: 18))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(club.name)
+                            .font(GolfTheme.headlineFont)
+                            .foregroundColor(GolfTheme.textPrimary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+
+                        HStack(spacing: 10) {
+                            if !hasSingleCourse {
+                                Text("\(club.courses.count) courses")
+                                    .font(GolfTheme.captionFont)
+                                    .foregroundColor(GolfTheme.textSecondary)
+                            } else if let par = club.courses[0].par {
+                                Label("Par \(par)", systemImage: "target")
+                                    .font(GolfTheme.captionFont)
+                                    .foregroundColor(GolfTheme.textSecondary)
+                            }
+
+                            if let distance {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location.fill")
+                                        .font(.system(size: 10))
+                                    Text(distance)
+                                        .font(GolfTheme.captionFont)
+                                }
+                                .foregroundColor(GolfTheme.grassGreen)
+                            }
+                        }
+                    }
+
+                    Spacer()
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(GolfTheme.grassGreen)
+                            .font(.title3)
+                    } else if !hasSingleCourse {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .foregroundColor(GolfTheme.textSecondary)
+                            .font(.caption)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(GolfTheme.textSecondary)
+                            .font(.caption)
+                    }
+                }
+                .padding()
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded && !hasSingleCourse {
+                VStack(spacing: 0) {
+                    ForEach(club.courses) { course in
+                        let courseSelected = selectedCourseId == course.id
+                        Button {
+                            onSelectCourse(course)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(course.courseLabel ?? course.courseName ?? "Main")
+                                    .font(GolfTheme.bodyFont.weight(.medium))
+                                    .foregroundColor(courseSelected ? GolfTheme.grassGreen : GolfTheme.textPrimary)
+
+                                if let par = course.par {
+                                    Text("Par \(par)")
+                                        .font(GolfTheme.captionFont)
+                                        .foregroundColor(GolfTheme.textSecondary)
+                                }
+
+                                if let info = course.holeAndTeeLabel {
+                                    Text(info)
+                                        .font(GolfTheme.captionFont)
+                                        .foregroundColor(GolfTheme.textSecondary)
+                                }
+
+                                Spacer()
+
+                                if courseSelected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(GolfTheme.grassGreen)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+
+                        if course.id != club.courses.last?.id {
+                            Divider().padding(.leading, 20)
+                        }
+                    }
+                }
+                .background(GolfTheme.grassGreen.opacity(0.03))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(isSelected ? GolfTheme.grassGreen.opacity(0.08) : GolfTheme.cream)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? GolfTheme.grassGreen.opacity(0.4) : Color.clear, lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
+    }
+}
+
+// MARK: - Simple Play Course Card (for recent courses)
+
+struct PlayCourseCard: View {
     let course: Course
     let distance: Double?
     let isSelected: Bool
     let action: () -> Void
-    
-    @State private var isPressed = false
-    
+
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
-                action()
-            }
-        }) {
+        Button(action: action) {
             HStack(spacing: 16) {
-                // Course Icon
                 ZStack {
                     Circle()
-                        .fill(
-                            isSelected ?
-                            GolfTheme.grassGreen.opacity(0.2) :
-                            GolfTheme.grassGreen.opacity(0.1)
-                        )
-                        .frame(width: 50, height: 50)
-                    
+                        .fill(GolfTheme.grassGreen.opacity(isSelected ? 0.2 : 0.1))
+                        .frame(width: 44, height: 44)
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "flag.fill")
                         .foregroundColor(isSelected ? GolfTheme.grassGreen : GolfTheme.textSecondary)
-                        .font(.title3)
+                        .font(.system(size: 18))
                 }
-                
-                // Course Info
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(course.name)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(course.displayName)
                         .font(GolfTheme.headlineFont)
                         .foregroundColor(GolfTheme.textPrimary)
                         .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    
-                    HStack(spacing: 12) {
-                        if let par = course.par {
-                            Label("Par \(par)", systemImage: "target")
-                                .font(GolfTheme.captionFont)
-                                .foregroundColor(GolfTheme.textSecondary)
+                    if let par = course.par {
+                        Label("Par \(par)", systemImage: "target")
+                            .font(GolfTheme.captionFont)
+                            .foregroundColor(GolfTheme.textSecondary)
+                    }
                 }
-                        
-                        if let distance = distance {
-                            Label(String(format: "%.1f mi", distance), systemImage: "location.fill")
-                                .font(GolfTheme.captionFont)
-                                .foregroundColor(GolfTheme.textSecondary)
-            }
-        }
-                }
-                
                 Spacer()
-                
-                // Selection Indicator
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(GolfTheme.grassGreen)
-                        .font(.title3)
-                } else {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(GolfTheme.textSecondary)
-                        .font(.caption)
-                }
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "chevron.right")
+                    .foregroundColor(isSelected ? GolfTheme.grassGreen : GolfTheme.textSecondary)
+                    .font(isSelected ? .title3 : .caption)
             }
             .padding()
-            .background(
-                isSelected ?
-                GolfTheme.grassGreen.opacity(0.1) :
-                GolfTheme.cream
-            )
+            .background(isSelected ? GolfTheme.grassGreen.opacity(0.08) : GolfTheme.cream)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isSelected ?
-                        GolfTheme.grassGreen.opacity(0.5) :
-                        Color.clear,
-                        lineWidth: 2
-                    )
+                    .stroke(isSelected ? GolfTheme.grassGreen.opacity(0.4) : Color.clear, lineWidth: 2)
             )
-            .scaleEffect(isPressed ? 0.97 : 1.0)
-            .shadow(
-                color: Color.black.opacity(isPressed ? 0.05 : 0.08),
-                radius: isPressed ? 4 : 8,
-                x: 0,
-                y: isPressed ? 2 : 4
-            )
+            .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -632,5 +634,6 @@ struct CourseCard: View {
         .environmentObject(LocationService.shared)
         .environmentObject(ProfileViewModel())
         .environmentObject(ScoreTrackingService.shared)
+        .environmentObject(FeedbackService.shared)
+        .environmentObject(HistoryStore())
 }
-

@@ -8,13 +8,18 @@
 import Foundation
 import CoreLocation
 
+/// Nonisolated base URL for use from any context (e.g. Task.detached)
+enum APIConfig {
+    static let baseURLString = "https://caddie-ai-backend.onrender.com"
+}
+
 @MainActor
 class APIService: ObservableObject {
     static let shared = APIService()
     
-    // Production backend base URL - single source of truth
-    static let baseURLString = "https://caddie-ai-backend.onrender.com"
-    private static let baseURL = URL(string: baseURLString)!
+    // Production backend base URL - single source of truth (use APIConfig.baseURLString from non-MainActor)
+    static let baseURLString = APIConfig.baseURLString
+    private static let baseURL = URL(string: APIConfig.baseURLString)!
     private let requestTimeout: TimeInterval = 20
     private let maxRetryCount = 2
     
@@ -22,11 +27,16 @@ class APIService: ObservableObject {
     
     // MARK: - URL Construction Helpers
     
-    /// Constructs a URL for an API endpoint, ensuring no double slashes
+    /// Constructs a URL for an API endpoint, ensuring no double slashes.
+    /// Splits path segments to avoid encoding slashes in path components.
     private func url(for endpoint: String) -> URL {
-        // Remove leading slash if present to avoid double slashes
         let cleanEndpoint = endpoint.hasPrefix("/") ? String(endpoint.dropFirst()) : endpoint
-        return Self.baseURL.appendingPathComponent(cleanEndpoint)
+        let segments = cleanEndpoint.split(separator: "/").map(String.init)
+        var result = Self.baseURL
+        for segment in segments {
+            result = result.appendingPathComponent(segment)
+        }
+        return result
     }
     
     /// Exposes the base URL for use by other services
@@ -87,17 +97,164 @@ class APIService: ObservableObject {
             throw APIError.invalidResponse
         }
         
+        #if DEBUG
+        print("[COURSE] fetchNearbyCourses status: \(httpResponse.statusCode)")
+        #endif
+        
         guard (200...299).contains(httpResponse.statusCode) else {
             DebugLogging.logAPI(endpoint: "courses (nearby)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, responseData: data, error: APIError.invalidResponse)
+            #if DEBUG
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[COURSE] fetchNearbyCourses error response: \(raw.prefix(500))")
+            }
+            #endif
             throw APIError.invalidResponse
         }
         
         do {
             let coursesResponse = try JSONDecoder().decode(CoursesResponse.self, from: data)
             DebugLogging.logAPI(endpoint: "courses (nearby)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, parsedModel: coursesResponse)
+            #if DEBUG
+            print("[COURSE] Loaded \(coursesResponse.courses.count) live courses from GET /api/courses")
+            for c in coursesResponse.courses.prefix(5) {
+                print("[COURSE]   \(c.displayName) (\(c.courseLabel ?? "-")) | courseId: \(c.id)")
+            }
+            #endif
             return coursesResponse.courses
         } catch {
             DebugLogging.logAPI(endpoint: "courses (nearby)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, responseData: data, error: error)
+            #if DEBUG
+            print("[COURSE] fetchNearbyCourses decode failed: \(error)")
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[COURSE] raw response: \(raw.prefix(1000))")
+            }
+            #endif
+            throw APIError.decodingError
+        }
+    }
+    
+    // MARK: - Round engine course context
+
+    /// Generic lat/lon coordinate DTO — reused for all POI types (green center, tee front/back, etc.)
+    struct CourseContextCoordDTO: Decodable {
+        let lat: Double
+        let lon: Double
+
+        var clCoordinate: CLLocationCoordinate2D {
+            CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+    }
+
+    /// Legacy alias kept so existing callsites compile unchanged.
+    typealias CourseContextGreenCenterDTO = CourseContextCoordDTO
+
+    struct CourseContextHoleDTO: Decodable {
+        let holeNumber: Int
+        let par: Int
+        let handicap: Int?
+        // Green POIs
+        let greenCenter: CourseContextCoordDTO?
+        let greenFront: CourseContextCoordDTO?
+        let greenBack: CourseContextCoordDTO?
+        // Tee POIs — populated from coordinates.csv entries "Tee Front" / "Tee Back"
+        let teeFront: CourseContextCoordDTO?
+        let teeBack: CourseContextCoordDTO?
+        let hazards: [String]?
+
+        enum CodingKeys: String, CodingKey {
+            case holeNumber = "hole_number"
+            case par
+            case handicap
+            case greenCenter = "green_center"
+            case greenFront  = "green_front"
+            case greenBack   = "green_back"
+            case teeFront    = "tee_front"
+            case teeBack     = "tee_back"
+            case hazards
+        }
+    }
+    
+    struct CourseContextTeeDTO: Decodable {
+        let id: String
+        let name: String
+        let totalYards: Int
+        
+        enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case totalYards = "total_yards"
+        }
+    }
+    
+    struct CourseContextCourseDTO: Decodable {
+        let id: String
+        let name: String
+        let lat: Double?
+        let lon: Double?
+        let city: String?
+        let state: String?
+        let clubName: String?
+        // TODO: Backend should supply courseRating (e.g. 72.1) and slopeRating (e.g. 131)
+        // for USGA-style handicap calculation. Until then these will decode as nil.
+        let courseRating: Double?
+        let slopeRating: Double?
+
+        var displayName: String {
+            clubName ?? name
+        }
+    }
+    
+    struct CourseContextResponse: Decodable {
+        let course: CourseContextCourseDTO
+        let holes: [CourseContextHoleDTO]
+        let tees: [CourseContextTeeDTO]
+    }
+    
+    func fetchCourseContext(courseId: String) async throws -> CourseContextResponse {
+        let encoded = courseId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? courseId
+        let url = url(for: "api/course-context/\(encoded)")
+        DebugLogging.logAPI(endpoint: "course-context", url: url, method: "GET", payload: ["courseId": courseId])
+        
+        #if DEBUG
+        print("[API] course-context requesting courseId: \(courseId)")
+        #endif
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            DebugLogging.logAPI(endpoint: "course-context", url: url, method: "GET", responseData: data, error: APIError.invalidResponse)
+            throw APIError.invalidResponse
+        }
+        
+        #if DEBUG
+        print("[API] course-context status: \(httpResponse.statusCode)")
+        #endif
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            DebugLogging.logAPI(endpoint: "course-context", url: url, method: "GET", responseStatus: httpResponse.statusCode, responseData: data, error: APIError.invalidResponse)
+            #if DEBUG
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[API] course-context error response: \(raw.prefix(500))")
+            }
+            #endif
+            throw APIError.invalidResponse
+        }
+        
+        do {
+            let decoded = try JSONDecoder().decode(CourseContextResponse.self, from: data)
+            DebugLogging.logAPI(endpoint: "course-context", url: url, method: "GET", responseStatus: httpResponse.statusCode, parsedModel: decoded)
+            #if DEBUG
+            print("[API] course-context decoded OK — course: \(decoded.course.displayName) holes: \(decoded.holes.count) tees: \(decoded.tees.count)")
+            #endif
+            return decoded
+        } catch {
+            DebugLogging.logAPI(endpoint: "course-context", url: url, method: "GET", responseStatus: httpResponse.statusCode, responseData: data, error: error)
+            #if DEBUG
+            print("[API] course-context decode failed: \(error)")
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[API] raw response: \(raw.prefix(1000))")
+            }
+            #endif
             throw APIError.decodingError
         }
     }
@@ -137,15 +294,32 @@ class APIService: ObservableObject {
         
         guard (200...299).contains(httpResponse.statusCode) else {
             DebugLogging.logAPI(endpoint: "courses (search)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, responseData: data, error: APIError.invalidResponse)
+            #if DEBUG
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[COURSE] searchCourses error response: \(raw.prefix(500))")
+            }
+            #endif
             throw APIError.invalidResponse
         }
         
         do {
             let coursesResponse = try JSONDecoder().decode(CoursesResponse.self, from: data)
             DebugLogging.logAPI(endpoint: "courses (search)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, parsedModel: coursesResponse)
+            #if DEBUG
+            print("[COURSE] Loaded \(coursesResponse.courses.count) live courses from search query=\(query)")
+            for c in coursesResponse.courses.prefix(5) {
+                print("[COURSE]   \(c.displayName) (\(c.courseLabel ?? "-")) | courseId: \(c.id)")
+            }
+            #endif
             return coursesResponse.courses
         } catch {
             DebugLogging.logAPI(endpoint: "courses (search)", url: url, method: "GET", payload: payload, responseStatus: httpResponse.statusCode, responseData: data, error: error)
+            #if DEBUG
+            print("[COURSE] searchCourses decode failed: \(error)")
+            if let raw = String(data: data, encoding: .utf8) {
+                print("[COURSE] raw response: \(raw.prefix(1000))")
+            }
+            #endif
             throw APIError.decodingError
         }
     }
@@ -631,6 +805,79 @@ class APIService: ObservableObject {
         }
 
         return data
+    }
+
+    /// Text-only putting analysis — sends structured JSON (no image).
+    func analyzePuttingText(context: PuttingContext, correlationId: String = UUID().uuidString) async throws -> PuttingRead {
+        let url = self.url(for: "api/openai/complete")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = requestTimeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(correlationId, forHTTPHeaderField: "X-Correlation-ID")
+
+        var userPayload: [String: Any] = [
+            "courseId": context.courseId,
+            "courseName": context.courseName,
+            "distanceFeet": context.distanceFeet,
+            "shotType": "putt"
+        ]
+        if let h = context.holeNumber { userPayload["holeNumber"] = h }
+        if let s = context.slope { userPayload["slope"] = s }
+        if let g = context.greenSpeed { userPayload["greenSpeed"] = g }
+        if let p = context.holePar { userPayload["par"] = p }
+
+        let systemPrompt = """
+        You are an expert golf caddie specializing in putting. Analyze the green conditions and provide a putting recommendation.
+        Return ONLY valid JSON matching: {"breakDirection":"string","breakAmount":0.0,"speed":"string","narrative":"string","theLine":"string","theSpeed":"string","finalPicture":"string","commitmentCue":"string"}
+        """
+
+        let userJSON = (try? JSONSerialization.data(withJSONObject: userPayload))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+
+        let body: [String: Any] = ["system": systemPrompt, "user": userJSON, "correlationId": correlationId]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        #if DEBUG
+        print("[API] analyzePuttingText courseId=\(context.courseId) distanceFeet=\(context.distanceFeet)")
+        #endif
+
+        let (data, httpResponse) = try await performRequest(
+            request: request,
+            endpoint: "openai/complete (putting-text)",
+            correlationId: correlationId,
+            safeToRetry: true
+        )
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            #if DEBUG
+            print("[API] analyzePuttingText status=\(httpResponse.statusCode)")
+            if let raw = String(data: data, encoding: .utf8) { print("[API] raw response: \(raw)") }
+            #endif
+            throw APIError.serverError("Putting analysis failed (Status: \(httpResponse.statusCode)).")
+        }
+
+        let openAIResp = try JSONDecoder().decode(OpenAIResponse.self, from: data)
+        guard let resultJSON = openAIResp.resultJSON, !resultJSON.isEmpty else {
+            throw APIError.missingResult
+        }
+
+        var cleaned = resultJSON.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("```") {
+            if let newline = cleaned.firstIndex(of: "\n") {
+                cleaned = String(cleaned[cleaned.index(after: newline)...])
+            }
+        }
+        if cleaned.hasSuffix("```") { cleaned = String(cleaned.dropLast(3)).trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        guard let jsonData = cleaned.data(using: .utf8) else {
+            throw APIError.decodingError
+        }
+
+        if let structured = try? JSONDecoder().decode(StructuredPuttingRead.self, from: jsonData) {
+            return PuttingRead(from: structured)
+        }
+        return try JSONDecoder().decode(PuttingRead.self, from: jsonData)
     }
 
     private func buildRequestMetadata(recommendationType: String, overrides: [String: Any]?) -> [String: Any] {

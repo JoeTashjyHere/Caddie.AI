@@ -20,9 +20,12 @@ struct CaddieHomeView: View {
     @EnvironmentObject var historyStore: HistoryStore
     
     @StateObject private var vm = CaddieShotViewModel()
+    @StateObject private var coursePickerVM = CourseViewModel()
     
     @State private var showingCamera = false
+    @State private var showingCoursePicker = false
     @State private var showingContextSheet = false
+    @State private var contextSheetIsPutting = false
     @State private var showingOnboarding = false
     @State private var showingOnboardingMessage = false
     @State private var contextDraft = CaddieContextDraft()
@@ -63,6 +66,11 @@ struct CaddieHomeView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showingCoursePicker) {
+                CourseSelectionView()
+                    .environmentObject(coursePickerVM)
+                    .environmentObject(locationService)
+            }
             .sheet(isPresented: $showingContextSheet) {
                 ContextConfirmSheet(
                     draft: $contextDraft,
@@ -77,7 +85,10 @@ struct CaddieHomeView: View {
                                 showingContextSheet = false
                             }
                         }
-                    }
+                    },
+                    roundContextMode: contextDraft.courseId != nil,
+                    photoOptional: contextDraft.quickModeNoPhoto,
+                    isPuttingFlow: false
                 )
                 .interactiveDismissDisabled(vm.requestState.isSubmitting)
             }
@@ -108,6 +119,15 @@ struct CaddieHomeView: View {
             }
             .onAppear {
                 vm.historyStore = historyStore
+                coursePickerVM.loadCurrentCourse()
+                if let c = coursePickerVM.currentCourse {
+                    vm.selectCourse(c)
+                }
+            }
+            .onChange(of: coursePickerVM.currentCourse) { _, newValue in
+                if let c = newValue {
+                    vm.selectCourse(c)
+                }
             }
             .alert("Error", isPresented: Binding(
                 get: { vm.errorMessage != nil },
@@ -151,10 +171,29 @@ struct CaddieHomeView: View {
     
     private var cameraCard: some View {
         VStack(spacing: 16) {
+            Button {
+                showingCoursePicker = true
+            } label: {
+                HStack {
+                    Image(systemName: "mappin.and.ellipse")
+                    Text(coursePickerVM.currentCourse?.name ?? "Select course")
+                        .lineLimit(1)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .font(GolfTheme.bodyFont)
+                .foregroundColor(GolfTheme.textPrimary)
+                .padding()
+                .background(GolfTheme.cream)
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+
             PrimaryCaddieCTAButton(
-                title: "Take Photo for Shot Recommendation",
-                subtitle: "Capture lie, then confirm context",
-                systemImage: "figure.golf",
+                title: "Full Shot",
+                subtitle: "Photo + verify context",
+                systemImage: "camera.fill",
                 color: GolfTheme.grassGreen
             ) {
                 guard !vm.requestState.isSubmitting else { return }
@@ -167,8 +206,26 @@ struct CaddieHomeView: View {
             }
 
             PrimaryCaddieCTAButton(
+                title: "Quick Shot",
+                subtitle: "No photo — verify & get recommendation",
+                systemImage: "bolt.fill",
+                color: .orange
+            ) {
+                guard !vm.requestState.isSubmitting else { return }
+                guard userProfileStore.isOnboardingComplete else {
+                    showingOnboardingMessage = true
+                    return
+                }
+                contextSheetIsPutting = false
+                vm.setPhoto(nil)
+                prefillShotDraft()
+                contextDraft.quickModeNoPhoto = true
+                showingContextSheet = true
+            }
+
+            PrimaryCaddieCTAButton(
                 title: "Green Reader",
-                subtitle: "Capture a putt and get a read",
+                subtitle: "Photo → putting read",
                 systemImage: "flag.2.crossed",
                 color: GolfTheme.accentGold
             ) {
@@ -204,11 +261,16 @@ struct CaddieHomeView: View {
 
         switch flow {
         case .shot:
+            contextSheetIsPutting = false
             prefillShotDraft()
             showingContextSheet = true
         case .putt:
+            prefillShotDraft()
             Task {
-                await vm.getPuttingRecommendation(profile: profileViewModel.profile)
+                await vm.getPuttingRecommendation(
+                    profile: profileViewModel.profile,
+                    draft: contextDraft
+                )
             }
         }
         captureFlow = nil
@@ -216,8 +278,17 @@ struct CaddieHomeView: View {
 
     private func prefillShotDraft() {
         contextDraft = CaddieContextDraft()
-        contextDraft.course = vm.currentCourse
-        contextDraft.courseName = vm.currentCourse?.name
+        let c = coursePickerVM.currentCourse ?? vm.currentCourse
+        contextDraft.course = c
+        contextDraft.courseName = c?.name
+        let cid = c?.id.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !cid.isEmpty {
+            contextDraft.courseId = cid
+            contextDraft.isRoundBackedContext = true
+        } else {
+            contextDraft.courseId = nil
+            contextDraft.isRoundBackedContext = false
+        }
         contextDraft.holeNumber = vm.currentHoleNumber
         contextDraft.lie = contextDraft.lie ?? "Fairway"
     }
@@ -254,7 +325,7 @@ struct CaddieCourseSheet: View {
                                     onSelectCourse(course)
                                 } label: {
                                     HStack {
-                                        Text(course.name)
+                                        Text(course.displayName)
                                             .font(GolfTheme.bodyFont)
                                             .foregroundColor(GolfTheme.textPrimary)
                                         Spacer()

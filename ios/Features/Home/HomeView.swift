@@ -13,11 +13,14 @@ struct HomeView: View {
     @EnvironmentObject var scoreTrackingService: ScoreTrackingService
     @EnvironmentObject var courseService: CourseService
     @EnvironmentObject var feedbackService: FeedbackService
+    @EnvironmentObject var historyStore: HistoryStore
     @StateObject private var courseViewModel = CourseViewModel()
     @StateObject private var homeViewModel = HomeViewModel()
     
     @State private var showingCourseSelection = false
     @State private var showingRoundPlay = false
+    @State private var showingRoundSetup = false
+    @State private var pendingRoundLaunch: RoundPlayLaunchConfig?
     @State private var showingStats = false
     @State private var showingAITip = false
     @State private var showingCourseIntelligence = false
@@ -72,15 +75,16 @@ struct HomeView: View {
                 // Defensive redirect: If round is in progress, redirect to RoundPlayView
                 if scoreTrackingService.phase == .inProgress,
                    let currentRound = scoreTrackingService.currentRound {
-                    let course = Course(name: currentRound.courseName, par: currentRound.par)
+                    let course = currentRound.resolvedCourse()
                     courseViewModel.selectCourse(course)
+                    pendingRoundLaunch = nil
                     showingRoundPlay = true
                     return
                 }
                 
                 // Defensive redirect: If in summary phase, prepare for summary view
                 if scoreTrackingService.phase == .summary,
-                   let currentRound = scoreTrackingService.currentRound {
+                   let _ = scoreTrackingService.currentRound {
                     // Summary will be handled by RoundPlayView or a separate summary flow
                     // For now, just reset phase if summary was dismissed
                     if showingRoundPlay == false {
@@ -130,13 +134,23 @@ struct HomeView: View {
                     .environmentObject(profileViewModel)
                     .environmentObject(locationService)
             }
+            .sheet(isPresented: $showingRoundSetup) {
+                if let course = courseViewModel.currentCourse {
+                    RoundPlaySetupSheet(course: course) { config in
+                        pendingRoundLaunch = config
+                        scoreTrackingService.setPhase(.inProgress)
+                        showingRoundPlay = true
+                    }
+                }
+            }
             .fullScreenCover(isPresented: $showingRoundPlay) {
                 if let course = courseViewModel.currentCourse ?? getCourseFromCurrentRound() {
                     RoundPlayView(
                         course: course,
+                        launchConfig: pendingRoundLaunch,
                         onRoundComplete: {
-                            // Round completed, move to summary phase
                             scoreTrackingService.completeRound()
+                            pendingRoundLaunch = nil
                             showingRoundPlay = false
                         }
                     )
@@ -144,16 +158,15 @@ struct HomeView: View {
                     .environmentObject(profileViewModel)
                     .environmentObject(scoreTrackingService)
                     .environmentObject(feedbackService)
+                    .environmentObject(historyStore)
                 } else {
-                    // No course available, redirect to course selection
                     CourseSelectionView()
                         .environmentObject(courseViewModel)
                         .environmentObject(locationService)
                         .onDisappear {
-                            // After course selection, start round if phase is selecting
                             if scoreTrackingService.phase == .selectingCourse,
-                               let course = courseViewModel.currentCourse {
-                                showingRoundPlay = true
+                               courseViewModel.currentCourse != nil {
+                                showingRoundSetup = true
                             }
                         }
                 }
@@ -248,7 +261,7 @@ struct HomeView: View {
                             impactFeedback.impactOccurred()
                             
                         if courseViewModel.currentCourse != nil {
-                            showingRoundPlay = true
+                            showingRoundSetup = true
                         } else {
                             showingCourseSelection = true
                         }
@@ -429,7 +442,7 @@ struct HomeView: View {
                         ForEach(courseViewModel.nearbyCourses.prefix(3)) { course in
                             HomeCourseCard(course: course) {
                                 courseViewModel.selectCourse(course)
-                                showingRoundPlay = true
+                                showingRoundSetup = true
                             }
                         }
                     }
@@ -535,10 +548,7 @@ struct HomeView: View {
     // MARK: - Helper Functions
     
     private func getCourseFromCurrentRound() -> Course? {
-        if let currentRound = scoreTrackingService.currentRound {
-            return Course(name: currentRound.courseName, par: currentRound.par)
-        }
-        return nil
+        scoreTrackingService.currentRound.map { $0.resolvedCourse() }
     }
     
     private func setupHomeView() {
@@ -645,8 +655,12 @@ struct HomeView: View {
                     Text("Round In Progress")
                         .font(GolfTheme.headlineFont)
                         .foregroundColor(GolfTheme.textPrimary)
-                    let currentHole = round.holes.first(where: { $0.strokes == 0 })?.holeNumber ?? 
-                                      round.holes.map { $0.holeNumber }.max() ?? 1
+                    let range = round.persistedRoundLength?.holeRange ?? 1...18
+                    let subsetHoles = round.holes.filter { range.contains($0.holeNumber) }
+                    let currentHole = round.currentHoleNumber
+                        ?? subsetHoles.first(where: { $0.strokes == 0 })?.holeNumber
+                        ?? subsetHoles.map(\.holeNumber).max()
+                        ?? range.lowerBound
                     Text("\(round.courseName) • Hole \(currentHole)")
                         .font(GolfTheme.captionFont)
                         .foregroundColor(GolfTheme.textSecondary)
@@ -657,9 +671,9 @@ struct HomeView: View {
             
             HStack(spacing: 12) {
                 Button(action: {
-                    // Resume round
-                    let course = Course(name: round.courseName, par: round.par)
+                    let course = round.resolvedCourse()
                     courseViewModel.selectCourse(course)
+                    pendingRoundLaunch = nil
                     showingRoundPlay = true
                 }) {
                     HStack {
@@ -877,7 +891,7 @@ struct HomeCourseCard: View {
             }
         }) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(course.name)
+                Text(course.displayName)
                     .font(GolfTheme.headlineFont)
                     .foregroundColor(GolfTheme.textPrimary)
                     .lineLimit(2)
@@ -974,4 +988,7 @@ class HomeViewModel: ObservableObject {
         .environmentObject(LocationService.shared)
         .environmentObject(ProfileViewModel())
         .environmentObject(ScoreTrackingService.shared)
+        .environmentObject(CourseService.shared)
+        .environmentObject(FeedbackService.shared)
+        .environmentObject(HistoryStore())
 }

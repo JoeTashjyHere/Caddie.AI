@@ -12,6 +12,11 @@ struct ContextConfirmSheet: View {
     let hasPhoto: Bool
     let isSubmitting: Bool
     let onGetRecommendation: () -> Void
+    /// In-round flow: uses backend `courseId` from the active round.
+    var roundContextMode: Bool = false
+    /// Quick (text-only) mode does not require a photo.
+    var photoOptional: Bool = false
+    var isPuttingFlow: Bool = false
 
     @State private var distanceText: String = ""
     @State private var selectedLie: String = "Fairway"
@@ -36,22 +41,30 @@ struct ContextConfirmSheet: View {
 
     let lieOptions = ["Fairway", "Rough", "Bunker", "Tee"]
 
+    private var backendCourseIdMissing: Bool {
+        let cid = draft.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return cid.isEmpty
+    }
+
     private var isFormValid: Bool {
         let courseNameValid = !courseNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let cityValid = !cityText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let stateValid = !stateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let holeValid = Int(holeNumberText).map { (1...18).contains($0) } ?? false
         let distanceValid = Double(distanceText).map { $0 > 0 } ?? false
-        return hasPhoto && courseNameValid && cityValid && stateValid && holeValid && distanceValid
+        let photoOk = hasPhoto || photoOptional
+        return photoOk && courseNameValid && holeValid && distanceValid && !backendCourseIdMissing
     }
 
     @ViewBuilder
     var body: some View {
         NavigationStack {
             ScrollView {
-                mainContent
+                if roundContextMode {
+                    verifyContent
+                } else {
+                    mainContent
+                }
             }
-            .navigationTitle("Confirm Context")
+            .navigationTitle(roundContextMode ? "Verify Shot" : "Confirm Context")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -65,21 +78,146 @@ struct ContextConfirmSheet: View {
                 setupInitialValues()
             }
         }
+        .presentationDetents(roundContextMode ? [.medium, .large] : [.large])
+        .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(isSubmitting)
+    }
+
+    /// Compact verification layout for in-round context (auto-filled, 1-tap confirm).
+    @ViewBuilder
+    private var verifyContent: some View {
+        VStack(spacing: 16) {
+            autoDetectedBadge
+                .padding(.horizontal)
+                .padding(.top, 4)
+
+            verifyGrid
+                .padding(.horizontal)
+
+            if !isPuttingFlow {
+                verifyShotRow
+                    .padding(.horizontal)
+            }
+
+            if let h = hazardsText.nilIfEmpty {
+                verifyField(icon: "exclamationmark.triangle.fill", label: "Hazards", value: h, color: .orange)
+                    .padding(.horizontal)
+            }
+
+            if backendCourseIdMissing {
+                Text("Course data required for accurate recommendations")
+                    .font(GolfTheme.captionFont)
+                    .foregroundColor(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+            }
+
+            if showValidationError && !isFormValid {
+                validationErrorMessage
+            }
+
+            getRecommendationButton
+                .padding(.top, 4)
+        }
+        .padding(.top, 4)
+    }
+
+    private var autoDetectedBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(GolfTheme.grassGreen)
+            Text("Auto-detected")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(GolfTheme.grassGreen)
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .background(GolfTheme.grassGreen.opacity(0.1))
+        .cornerRadius(8)
+    }
+
+    private var verifyGrid: some View {
+        let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+        return LazyVGrid(columns: cols, spacing: 10) {
+            verifyTile(label: "Course", value: courseNameText.isEmpty ? "--" : courseNameText, icon: "flag.fill", color: GolfTheme.grassGreen)
+            verifyTile(label: "Hole", value: holeNumberText.isEmpty ? "--" : "Hole \(holeNumberText)" + (draft.holePar.map { " • Par \($0)" } ?? ""), icon: "mappin.circle.fill", color: .blue)
+            verifyTile(label: "Distance", value: distanceText.isEmpty ? "--" : "\(distanceText) yds", icon: "ruler.fill", color: .purple)
+            verifyTile(label: "Tee", value: draft.teeName ?? "--", icon: "circle.fill", color: GolfTheme.accentGold)
+        }
+    }
+
+    private func verifyTile(label: String, value: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(GolfTheme.textSecondary)
+            }
+            Text(value)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(GolfTheme.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+
+    private var verifyShotRow: some View {
+        HStack(spacing: 10) {
+            verifyField(icon: "scope", label: "Shot Type", value: selectedShotType.displayName, color: .purple)
+            verifyField(icon: "circle.grid.2x2.fill", label: "Lie", value: selectedLie, color: .blue)
+        }
+    }
+
+    private func verifyField(icon: String, label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(GolfTheme.textSecondary)
+                Text(value)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(GolfTheme.textPrimary)
+                    .lineLimit(2)
+            }
+            Spacer()
+        }
+        .padding(10)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
     }
 
     @ViewBuilder
     private var mainContent: some View {
         VStack(spacing: 24) {
             courseNameSection
-            citySection
-            stateSection
             holeNumberSection
             distanceInputSection
-            shotTypeSection
-            lieTypeSection
+            if !isPuttingFlow {
+                shotTypeSection
+                lieTypeSection
+            }
             hazardsSection
             confidenceSection
+
+            if backendCourseIdMissing {
+                Text("Course data required for accurate recommendations")
+                    .font(GolfTheme.captionFont)
+                    .foregroundColor(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+            }
 
             if showValidationError && !isFormValid {
                 validationErrorMessage
@@ -254,10 +392,24 @@ struct ContextConfirmSheet: View {
     }
 
     private var validationErrorMessage: some View {
-        Text("Required: photo, course name, city, state, hole number, and distance.")
-            .font(GolfTheme.captionFont)
-            .foregroundColor(.red)
-            .padding(.horizontal)
+        Group {
+            if backendCourseIdMissing {
+                Text("Course data required for accurate recommendations.")
+            } else if roundContextMode {
+                Text("Required: photo (unless quick mode), course name, backend course ID, hole number, and distance.")
+            } else {
+                Text("Required: photo (unless quick mode), course name, backend course ID, hole number, and distance.")
+            }
+        }
+        .font(GolfTheme.captionFont)
+        .foregroundColor(.red)
+        .padding(.horizontal)
+    }
+
+    private var confirmButtonLabel: String {
+        if isSubmitting { return "Analyzing…" }
+        if roundContextMode { return "Confirm & Get Recommendation" }
+        return isPuttingFlow ? "Get Putting Read" : "Get Recommendation"
     }
 
     private var getRecommendationButton: some View {
@@ -274,8 +426,11 @@ struct ContextConfirmSheet: View {
                 if isSubmitting {
                     ProgressView()
                         .tint(.white)
+                } else if roundContextMode {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
                 }
-                Text(isSubmitting ? "Analyzing..." : "Get Recommendation")
+                Text(confirmButtonLabel)
                     .font(GolfTheme.headlineFont)
             }
             .frame(maxWidth: .infinity)
@@ -304,6 +459,13 @@ struct ContextConfirmSheet: View {
             holeNumberText = ""
         }
         hazardsText = draft.hazards ?? ""
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

@@ -74,6 +74,24 @@ class RecommenderService {
     }
     
     private init() {}
+
+    /// Logs when key prompt fields are missing so debugging round/course wiring is easier.
+    private func logMissingContext(shotContext: ShotContextData, environment: ShotContext) {
+        var parts: [String] = []
+        if shotContext.courseId.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? true {
+            parts.append("courseId")
+        }
+        if shotContext.holePar == nil { parts.append("holePar") }
+        let tee = shotContext.teeName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if tee.isEmpty { parts.append("teeName") }
+        if shotContext.holeNumber == nil { parts.append("holeNumber") }
+        if shotContext.distanceToTargetYards <= 0 { parts.append("distanceToGreenYards") }
+        if environment.weatherSource != .liveAPI { parts.append("liveWind") }
+        guard !parts.isEmpty else { return }
+        for field in parts {
+            print("[CADDIE] Missing context field: \(field)")
+        }
+    }
     
     /// Get recommendation with automatic fallback chain:
     /// Photo → AI Vision → Text AI → Offline Fallback
@@ -89,7 +107,10 @@ class RecommenderService {
         holeNumber: Int? = nil,
         shotType: String? = nil,
         historyStore: HistoryStore? = nil,
-        correlationId: String = UUID().uuidString
+        correlationId: String = UUID().uuidString,
+        courseId: String? = nil,
+        holePar: Int? = nil,
+        teeName: String? = nil
     ) async throws -> ShotRecommendation {
         
         // Use safe formatters with fallback to selected course if explicit fields are missing
@@ -99,6 +120,20 @@ class RecommenderService {
         let safeCourseName = SafeFormatter.safeString(resolvedCourseName)
         let safeCity = SafeFormatter.safeString(city)
         let safeState = SafeFormatter.safeString(state)
+        let resolvedCourseId: String? = {
+            if let raw = courseId?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty { return raw }
+            if let cid = course?.id.trimmingCharacters(in: .whitespacesAndNewlines), !cid.isEmpty { return cid }
+            return nil
+        }()
+        guard let effectiveCourseId = resolvedCourseId else {
+            print("[CADDIE] Blocked recommendation — missing courseId")
+            AnalyticsService.shared.track(event: .recommendationError(courseId: nil, holeNumber: holeNumber, shotType: shotType ?? "full", hasPhoto: photo != nil, isRoundBacked: false, errorMessage: "missing_course_id"))
+            throw NSError(
+                domain: "RecommenderService",
+                code: 100,
+                userInfo: [NSLocalizedDescriptionKey: "Course data not available. Please restart the round or reselect a course."]
+            )
+        }
         let resolvedHole = holeNumber ?? context.hole
         let resolvedShotType = SafeFormatter.safeString(shotType ?? "Approach")
         let strategyPreferences = loadStrategyPreferences()
@@ -151,8 +186,12 @@ class RecommenderService {
             shotType: resolvedShotType,
             photoAnalysisSummary: photoAnalysisSummary,
             candidateClubs: candidateClubNames,
-            playsLikeDistanceYards: clubSelectionContext.playsLikeDistance
+            playsLikeDistanceYards: clubSelectionContext.playsLikeDistance,
+            courseId: resolvedCourseId,
+            holePar: holePar,
+            teeName: teeName
         )
+        logMissingContext(shotContext: shotContextData, environment: context)
         
         let playerProfileData = PlayerProfileData(from: profile)
         
@@ -162,21 +201,25 @@ class RecommenderService {
             playerProfile: playerProfileData,
             environmentalContext: context,
             historicalLearning: historicalLearning,
-            strategyPreferences: strategyPreferences
+            strategyPreferences: strategyPreferences,
+            correlationId: correlationId
         )
         
+        var ctxPayload: [String: Any] = [
+            "hole": context.hole,
+            "distanceYards": Int(context.distanceToCenter),
+            "elevationDeltaYards": Int(context.elevationDelta),
+            "windMph": context.windSpeedMph,
+            "windDirDeg": context.windDirectionDeg,
+            "tempF": context.temperatureF
+        ]
+        ctxPayload["courseId"] = effectiveCourseId
+        if let holePar { ctxPayload["holePar"] = holePar }
         let payload: [String: Any] = [
             "system": systemPrompt,
             "user": userPrompt,
             "hasPhoto": photo != nil,
-            "context": [
-                "hole": context.hole,
-                "distanceYards": Int(context.distanceToCenter),
-                "elevationDeltaYards": Int(context.elevationDelta),
-                "windMph": context.windSpeedMph,
-                "windDirDeg": context.windDirectionDeg,
-                "tempF": context.temperatureF
-            ]
+            "context": ctxPayload
         ]
         
         // Step 1: Try photo → AI Vision if photo is available
@@ -200,7 +243,7 @@ class RecommenderService {
                     )
                     let normalizedRecommendation = applyPhotoInfluenceGuardrail(
                         to: normalization.recommendation,
-                        hasPhoto: photo != nil
+                        hasPhoto: true
                     )
                     recordDiagnostics(
                         correlationId: correlationId,
@@ -209,7 +252,7 @@ class RecommenderService {
                         holeNumber: resolvedHole,
                         shotType: resolvedShotType,
                         hazards: hazards,
-                        hasPhoto: photo != nil,
+                        hasPhoto: true,
                         selectionContext: clubSelectionContext,
                         aiChosenClub: recommendation.club,
                         finalRecommendation: normalizedRecommendation,
@@ -225,6 +268,7 @@ class RecommenderService {
             } catch {
                 DebugLogging.log("⚠️ AI Vision failed: \(error.localizedDescription), falling back to text AI", category: "ShotFlow")
                 DebugLogging.logAPI(endpoint: "RecommenderService.getRecommendation (vision)", url: nil as URL?, method: "POST", payload: payload, error: error)
+                AnalyticsService.shared.track(event: .recommendationError(courseId: effectiveCourseId, holeNumber: resolvedHole, shotType: resolvedShotType, hasPhoto: photo != nil, isRoundBacked: true, errorMessage: "vision_ai: \(error.localizedDescription)"))
             }
         }
         
@@ -245,10 +289,10 @@ class RecommenderService {
                     profile: profile,
                     selectionContext: clubSelectionContext
                 )
-                    let normalizedRecommendation = applyPhotoInfluenceGuardrail(
-                        to: normalization.recommendation,
-                        hasPhoto: photo != nil
-                    )
+                let normalizedRecommendation = applyPhotoInfluenceGuardrail(
+                    to: normalization.recommendation,
+                    hasPhoto: photo != nil
+                )
                 recordDiagnostics(
                     correlationId: correlationId,
                     context: context,
@@ -272,6 +316,7 @@ class RecommenderService {
         } catch {
             DebugLogging.log("⚠️ Text AI failed: \(error.localizedDescription), falling back to offline", category: "ShotFlow")
             DebugLogging.logAPI(endpoint: "RecommenderService.getRecommendation (text)", url: nil as URL?, method: "POST", payload: payload, error: error)
+            AnalyticsService.shared.track(event: .recommendationError(courseId: effectiveCourseId, holeNumber: resolvedHole, shotType: resolvedShotType, hasPhoto: photo != nil, isRoundBacked: true, errorMessage: "text_ai: \(error.localizedDescription)"))
         }
         
         // Step 3: Final fallback to offline recommendation
@@ -361,6 +406,10 @@ class RecommenderService {
             if gap > 35, let fallbackClub = topCandidate {
                 normalized.club = fallbackClub.name
                 normalized.shotShape = fallbackClub.preferredShotShape.rawValue.capitalized
+                if var c = normalized.caddieStructured {
+                    c.club = fallbackClub.name
+                    normalized.caddieStructured = c
+                }
                 normalized.narrative += "\n\nAdjusted to \(fallbackClub.name) because the original club was \(gap) yards off plays-like distance."
                 return (normalized, "AI club distance gap (\(gap)yd) exceeded threshold; switched to top candidate")
             }
@@ -370,6 +419,10 @@ class RecommenderService {
         if let fallbackClub = topCandidate {
             normalized.club = fallbackClub.name
             normalized.shotShape = fallbackClub.preferredShotShape.rawValue.capitalized
+            if var c = normalized.caddieStructured {
+                c.club = fallbackClub.name
+                normalized.caddieStructured = c
+            }
             normalized.narrative += "\n\nAdjusted to \(fallbackClub.name) because the AI-selected club was not in your bag."
             return (normalized, "AI club not in bag; switched to top candidate")
         }
@@ -639,26 +692,198 @@ class RecommenderService {
     }
     #endif
     
+    // MARK: - Decision-Engine-Powered Recommendation
+
+    /// Generates a recommendation using the 4-layer architecture:
+    /// 1. Context (ShotContext + hazards) → 2. Decision Engine → 3. Prompt Builder → 4. LLM Language Generator
+    /// Falls back to deterministic text if LLM fails.
+    func getDecisionPoweredRecommendation(
+        profile: PlayerProfile,
+        context: ShotContext,
+        hazards: [String],
+        holePar: Int?,
+        holeHandicap: Int?,
+        photo: UIImage? = nil,
+        correlationId: String = UUID().uuidString
+    ) async throws -> ShotRecommendation {
+
+        let shotBearing = bearingDegrees(from: context.playerCoordinate, to: context.targetCoordinate)
+
+        let decision = ShotDecisionEngine.decide(
+            distanceYards: context.distanceToCenter,
+            lie: context.lieType,
+            hazards: hazards,
+            holePar: holePar,
+            holeHandicap: holeHandicap,
+            wind: context.weatherSource == .liveAPI
+                ? ShotDecisionEngine.WindInput(speedMph: context.windSpeedMph, directionDeg: context.windDirectionDeg, source: context.weatherSource)
+                : nil,
+            elevation: context.elevationSource == .liveAPI
+                ? ShotDecisionEngine.ElevationInput(deltaYards: context.elevationDelta, source: context.elevationSource)
+                : nil,
+            bag: profile.clubs,
+            playerMissLeftPct: profile.missesLeftPct,
+            playerMissRightPct: profile.missesRightPct,
+            shotBearing: shotBearing
+        )
+
+        #if DEBUG
+        print("[DECISION] \(decision.club) | \(decision.swing) | eff=\(decision.effectiveDistance) | target=\(decision.target) | miss=\(decision.missGuidance) | priority=\(decision.priority.rawValue) | risk=\(decision.riskLevel.rawValue) | confidence=\(decision.confidence.rawValue)")
+        #endif
+
+        let tendencies: String? = {
+            let parts = profile.clubs.prefix(3).map { "\($0.name): miss L \(Int($0.missLeftPct))% R \(Int($0.missRightPct))%" }
+            return parts.isEmpty ? nil : parts.joined(separator: "; ")
+        }()
+
+        let (systemPrompt, userPrompt) = promptBuilder.buildDecisionPoweredPrompt(
+            decision: decision,
+            hazards: hazards,
+            holePar: holePar,
+            holeHandicap: holeHandicap,
+            playerTendencies: tendencies
+        )
+
+        if let photo = photo {
+            do {
+                let json = try await OpenAIClient.shared.completeWithVision(
+                    system: systemPrompt,
+                    user: userPrompt,
+                    image: photo,
+                    correlationId: correlationId
+                )
+                if let rec = parseDecisionResponse(json, decision: decision) { return rec }
+            } catch {
+                #if DEBUG
+                print("[DECISION] Vision failed, trying text: \(error.localizedDescription)")
+                #endif
+            }
+        }
+
+        do {
+            let json = try await OpenAIClient.shared.complete(
+                system: systemPrompt,
+                user: userPrompt,
+                correlationId: correlationId
+            )
+            if let rec = parseDecisionResponse(json, decision: decision) { return rec }
+        } catch {
+            #if DEBUG
+            print("[DECISION] Text AI failed, using deterministic fallback: \(error.localizedDescription)")
+            #endif
+        }
+
+        return buildDeterministicFallback(from: decision)
+    }
+
+    private func parseDecisionResponse(_ jsonString: String, decision: ShotDecision) -> ShotRecommendation? {
+        let cleaned = stripMarkdownCodeFences(jsonString)
+        guard let data = cleaned.data(using: .utf8) else { return nil }
+
+        struct DecisionLLMResponse: Decodable {
+            let headline: String?
+            let recommendation: String?
+            let club: String?
+            let target: String?
+            let miss_guidance: String?
+            let confidence: String?
+        }
+
+        guard let resp = try? JSONDecoder().decode(DecisionLLMResponse.self, from: data) else { return nil }
+        let rec = resp.recommendation ?? decision.fallbackText
+        let headline = resp.headline ?? "\(decision.swing.capitalized) \(decision.club)"
+
+        guard !rec.isEmpty else { return nil }
+
+        let confNum: Double = {
+            switch (resp.confidence ?? decision.confidence.rawValue).lowercased() {
+            case "high": return 0.9
+            case "medium": return 0.65
+            case "low": return 0.45
+            default: return 0.7
+            }
+        }()
+
+        let caddie = CaddieRecommendation(
+            club: resp.club ?? decision.club,
+            shotType: decision.swing,
+            aim: resp.target ?? decision.target,
+            strategy: resp.miss_guidance ?? decision.missGuidance,
+            confidence: resp.confidence ?? decision.confidence.rawValue.capitalized
+        )
+
+        return ShotRecommendation(
+            club: resp.club ?? decision.club,
+            aimOffsetYards: 0,
+            shotShape: "Straight",
+            narrative: rec,
+            confidence: confNum,
+            avoidZones: decision.primaryRisk.map { [$0] } ?? [],
+            headline: headline,
+            bullets: [],
+            commitCue: nil,
+            caddieStructured: caddie
+        )
+    }
+
+    private func buildDeterministicFallback(from decision: ShotDecision) -> ShotRecommendation {
+        let caddie = CaddieRecommendation(
+            club: decision.club,
+            shotType: decision.swing,
+            aim: decision.target,
+            strategy: decision.missGuidance,
+            confidence: decision.confidence.rawValue.capitalized
+        )
+        return ShotRecommendation(
+            club: decision.club,
+            aimOffsetYards: 0,
+            shotShape: "Straight",
+            narrative: decision.fallbackText,
+            confidence: decision.confidence == .high ? 0.85 : decision.confidence == .medium ? 0.65 : 0.45,
+            avoidZones: decision.primaryRisk.map { [$0] } ?? [],
+            headline: "\(decision.swing.capitalized) \(decision.club)",
+            bullets: [decision.target, decision.missGuidance].filter { !$0.isEmpty },
+            commitCue: nil,
+            caddieStructured: caddie
+        )
+    }
+
     func fallbackRecommendation(profile: PlayerProfile, context: ShotContext) -> ShotRecommendation {
         let targetDistance = Int(context.distanceToCenter)
         guard !profile.clubs.isEmpty else {
+            let caddie = CaddieRecommendation(
+                club: "7i",
+                shotType: "Controlled swing",
+                aim: "Center of green",
+                strategy: "No bag configured; default safe club. Add your clubs in Profile.",
+                confidence: "Low"
+            )
             return ShotRecommendation(
                 club: "7i",
                 aimOffsetYards: 0.0,
                 shotShape: "Straight",
                 narrative: "⚠️ Fallback recommendation: No clubs configured. Please set up your clubs in Profile. Using default 7i.",
                 confidence: 0.5,
-                avoidZones: []
+                avoidZones: [],
+                caddieStructured: caddie
             )
         }
         let closestClub = profile.clubs.min(by: { abs($0.carryYards - targetDistance) < abs($1.carryYards - targetDistance) }) ?? profile.clubs[0]
+        let caddie = CaddieRecommendation(
+            club: closestClub.name,
+            shotType: "Controlled swing",
+            aim: "Center of green",
+            strategy: "Offline fallback: distance-matched club from your bag; confirm lie and wind.",
+            confidence: "Medium"
+        )
         return ShotRecommendation(
             club: closestClub.name,
             aimOffsetYards: 0.0,
             shotShape: closestClub.preferredShotShape.rawValue.capitalized,
             narrative: "⚠️ Fallback recommendation: AI analysis unavailable. Using \(closestClub.name) for \(targetDistance) yards. Aim for center of green.",
             confidence: 0.7,
-            avoidZones: []
+            avoidZones: [],
+            caddieStructured: caddie
         )
     }
 }

@@ -8,6 +8,8 @@ import SwiftUI
 struct EditRoundSheet: View {
     let currentCourse: Course
     @Binding var currentHole: Int
+    /// When set, hole picker is limited to this range (e.g. front/back nine).
+    var allowedHoleRange: ClosedRange<Int>? = nil
     let onCourseChange: () -> Void
     
     @EnvironmentObject var courseViewModel: CourseViewModel
@@ -74,6 +76,7 @@ struct EditRoundSheet: View {
     EditRoundSheet(
         currentCourse: Course(name: "Pebble Beach Golf Links", par: 72),
         currentHole: .constant(5),
+        allowedHoleRange: nil,
         onCourseChange: {}
     )
     .environmentObject(CourseViewModel())

@@ -89,16 +89,13 @@ final class UserProfileStore: ObservableObject {
 
     func validateRequiredFields(_ profile: UserProfile) -> Bool {
         let firstNameValid = !profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let emailTrimmed = profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let emailValid = !emailTrimmed.isEmpty && emailTrimmed.contains("@")
-        let greenRiskValid = !(profile.greenRiskPreference?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         let hasRequiredClubs = hasRequiredClubSet(profile.clubDistances)
-        return firstNameValid && emailValid && greenRiskValid && hasRequiredClubs
+        return firstNameValid && hasRequiredClubs
     }
 
     func ensureRequiredClubRows() {
         var clubs = profile.clubDistances
-        let required: [ClubType] = [.driver, .iron7, .pitchingWedge]
+        let required: [ClubType] = [.driver, .iron7]
 
         for clubType in required where !clubs.contains(where: { $0.clubTypeId == clubType.rawValue }) {
             clubs.append(ClubDistance(clubTypeId: clubType.rawValue, distanceYards: 0))
@@ -109,10 +106,12 @@ final class UserProfileStore: ObservableObject {
     }
 
     private func hasRequiredClubSet(_ clubs: [ClubDistance]) -> Bool {
-        let selected = Set(clubs.map { $0.clubTypeId })
-        return selected.contains(ClubType.driver.rawValue)
-            && selected.contains(ClubType.iron7.rawValue)
-            && selected.contains(ClubType.pitchingWedge.rawValue)
+        let ids = Set(clubs.map { $0.clubTypeId })
+        let hasDriver = ids.contains(ClubType.driver.rawValue)
+        let has7Iron = ids.contains(ClubType.iron7.rawValue)
+        let driverHasDistance = clubs.first { $0.clubTypeId == ClubType.driver.rawValue }?.distanceYards ?? 0 > 0
+        let ironHasDistance = clubs.first { $0.clubTypeId == ClubType.iron7.rawValue }?.distanceYards ?? 0 > 0
+        return hasDriver && has7Iron && driverHasDistance && ironHasDistance
     }
 
     private func migrateLegacyProfile() -> UserProfile? {

@@ -34,6 +34,13 @@ class ProfileViewModel: ObservableObject {
         profile.golfGoal = userProfile.golfGoal
         profile.puttingTendencies = userProfile.puttingTendencies ?? ""
 
+        if let handedness = userProfile.handedness, !handedness.isEmpty {
+            profile.handedness = handedness
+        }
+        if let skillLevel = userProfile.skillLevel, !skillLevel.isEmpty {
+            profile.skillLevel = skillLevel
+        }
+
         if let greenRisk = userProfile.greenRiskPreference,
            let mapped = GreenRiskPreference(rawValue: greenRisk) {
             profile.greenRiskPreference = mapped

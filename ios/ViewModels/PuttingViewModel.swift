@@ -17,7 +17,7 @@ class PuttingViewModel: ObservableObject {
     private let apiService = APIService.shared
     var historyStore: HistoryStore?
     private var inFlightTask: Task<Void, Never>?
-    private var lastRequest: (imageData: Data, courseId: String, holeNumber: Int, lat: Double?, lon: Double?, correlationId: String)?
+    private var lastRequest: (imageData: Data, courseId: String, holeNumber: Int, lat: Double?, lon: Double?, context: [String: String?], correlationId: String)?
 
     func analyzePutting(
         imageData: Data,
@@ -25,31 +25,35 @@ class PuttingViewModel: ObservableObject {
         holeNumber: Int,
         lat: Double? = nil,
         lon: Double? = nil,
+        context: [String: String?] = [:],
         correlationId: String = UUID().uuidString
     ) async {
         guard !requestState.isSubmitting else { return }
         inFlightTask?.cancel()
-        lastRequest = (imageData, courseId, holeNumber, lat, lon, correlationId)
+        lastRequest = (imageData, courseId, holeNumber, lat, lon, context, correlationId)
 
         isLoading = true
         errorMessage = nil
         puttingRead = nil
         requestState = .submitting
         let startedAt = Date()
+        AnalyticsService.shared.track(event: .puttingRequested(courseId: courseId, holeNumber: holeNumber, hasPhoto: true, isRoundBacked: true))
 
         inFlightTask = Task { [weak self] in
             guard let self else { return }
 
             do {
+                var mergedContext = context
+                if mergedContext["holeNumber"] == nil {
+                    mergedContext["holeNumber"] = String(holeNumber)
+                }
                 let responseData = try await apiService.analyzePutting(
                     imageData: imageData,
                     courseId: courseId,
                     holeNumber: holeNumber,
                     lat: lat,
                     lon: lon,
-                    context: [
-                        "holeNumber": String(holeNumber)
-                    ],
+                    context: mergedContext,
                     correlationId: correlationId
                 )
 
@@ -84,8 +88,9 @@ class PuttingViewModel: ObservableObject {
                 }
 
                 let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                AnalyticsService.shared.track(event: .puttingCompleted(courseId: courseId, holeNumber: holeNumber, hasPhoto: true, isRoundBacked: true, responseTimeMs: durationMs))
                 AnalyticsService.shared.track(
-                    AnalyticsEvent(
+                    AnalyticsPayload(
                         id: UUID().uuidString,
                         eventType: "recommendation_completed",
                         timestamp: ISO8601DateFormatter().string(from: Date()),
@@ -164,8 +169,9 @@ class PuttingViewModel: ObservableObject {
                 requestState = .failure(errorMessage: message, debugId: correlationId)
 
                 let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                AnalyticsService.shared.track(event: .recommendationError(courseId: courseId, holeNumber: holeNumber, shotType: "putt", hasPhoto: true, isRoundBacked: true, errorMessage: message))
                 AnalyticsService.shared.track(
-                    AnalyticsEvent(
+                    AnalyticsPayload(
                         id: UUID().uuidString,
                         eventType: "recommendation_failed",
                         timestamp: ISO8601DateFormatter().string(from: Date()),
@@ -206,6 +212,7 @@ class PuttingViewModel: ObservableObject {
             holeNumber: lastRequest.holeNumber,
             lat: lastRequest.lat,
             lon: lastRequest.lon,
+            context: lastRequest.context,
             correlationId: UUID().uuidString
         )
     }

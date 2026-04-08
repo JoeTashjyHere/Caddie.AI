@@ -23,6 +23,9 @@ class RoundViewModel: ObservableObject {
     
     // Optional history store for saving recommendations
     var historyStore: HistoryStore?
+
+    /// When set, hole navigation and `setHole` respect the active round subset; `askCaddie` prefill uses live context.
+    weak var activeRoundContext: ActiveRoundContext?
     
     // Legacy computed properties for backward compatibility
     var isLoadingAI: Bool {
@@ -34,10 +37,16 @@ class RoundViewModel: ObservableObject {
     }
     
     init() {
-        // Load current course from CourseViewModel or UserDefaults
         if let data = UserDefaults.standard.data(forKey: "CurrentCourse"),
            let course = try? JSONDecoder().decode(Course.self, from: data) {
-            currentCourse = course
+            if course.hasValidBackendId {
+                currentCourse = course
+            } else {
+                #if DEBUG
+                print("[COURSE] Invalid cached courseId detected, clearing: \(course.id)")
+                #endif
+                UserDefaults.standard.removeObject(forKey: "CurrentCourse")
+            }
         }
     }
     
@@ -97,8 +106,19 @@ class RoundViewModel: ObservableObject {
         return capturedShots[hole] ?? []
     }
     
+    /// Sync from `ActiveRoundContext` (single writer for hole during Play round).
+    func syncHoleFromContext(_ hole: Int) {
+        guard currentHole != hole else { return }
+        currentHole = hole
+        resetShotFlowForNewHole()
+    }
+
     func setHole(_ hole: Int) {
-        guard hole >= 1 && hole <= 18 else { return }
+        if let ctx = activeRoundContext {
+            guard ctx.activeHoleRange.contains(hole) else { return }
+        } else {
+            guard hole >= 1 && hole <= 18 else { return }
+        }
         currentHole = hole
         resetShotFlowForNewHole()
     }
@@ -147,14 +167,16 @@ class RoundViewModel: ObservableObject {
     }
     
     func nextHole() {
-        if currentHole < 18 {
+        let upper = activeRoundContext?.activeHoleRange.upperBound ?? 18
+        if currentHole < upper {
             currentHole += 1
             resetShotFlowForNewHole()
         }
     }
-    
+
     func previousHole() {
-        if currentHole > 1 {
+        let lower = activeRoundContext?.activeHoleRange.lowerBound ?? 1
+        if currentHole > lower {
             currentHole -= 1
             resetShotFlowForNewHole()
         }
@@ -188,7 +210,27 @@ class RoundViewModel: ObservableObject {
         
         // Hole
         payload["hole"] = currentHole
-        
+
+        if let ctx = activeRoundContext, ctx.isLoaded {
+            var rc: [String: Any] = [
+                "courseId": ctx.courseId,
+                "courseName": ctx.courseName,
+                "hole": ctx.currentHole,
+                "roundLength": ctx.roundLength.rawValue
+            ]
+            if let par = ctx.hole(for: ctx.currentHole)?.par {
+                rc["par"] = par
+            }
+            if let tee = ctx.selectedTee {
+                rc["teeId"] = tee.id
+                rc["teeName"] = tee.name
+            }
+            if let y = ctx.distances?.center {
+                rc["distanceToGreenCenterYards"] = Int(round(y))
+            }
+            payload["roundContext"] = rc
+        }
+
         // Location (if available)
         if let location = location {
             payload["location"] = [

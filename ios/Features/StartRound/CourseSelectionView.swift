@@ -33,18 +33,16 @@ struct CourseSelectionView: View {
         CoordinateKey(locationService.coordinate)
     }
     
-    // Computed property for displayed courses with fuzzy search
-    private var filteredCourses: [Course] {
-        let baseCourses = courseViewModel.displayedCourses(searchText: searchText)
-        
-        guard !searchText.isEmpty else { return baseCourses }
-        
+    private var filteredClubs: [GolfClub] {
+        let allClubs = courseViewModel.clubs
+        guard !searchText.isEmpty else { return allClubs }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if query.isEmpty { return baseCourses }
-        
-        // Apply fuzzy search filtering
-        return baseCourses.filter { course in
-            courseViewModel.fuzzyMatch(query: query, in: course.name)
+        if query.isEmpty { return allClubs }
+        return allClubs.filter { club in
+            courseViewModel.fuzzyMatch(query: query, in: club.name)
+            || club.courses.contains { c in
+                courseViewModel.fuzzyMatch(query: query, in: c.courseLabel ?? "")
+            }
         }
     }
     
@@ -115,7 +113,7 @@ struct CourseSelectionView: View {
                 }
             }
             .onChange(of: scrollToCourseId) { oldValue, newValue in
-                if let courseId = newValue {
+                if newValue != nil {
                     // Scroll will be handled in ScrollViewReader
                 }
             }
@@ -127,7 +125,7 @@ struct CourseSelectionView: View {
     private var mapSection: some View {
         ZStack(alignment: .bottomTrailing) {
             CourseMapView(
-                courses: filteredCourses,
+                courses: courseViewModel.uniqueClubCourses,
                 userLocation: locationService.coordinate,
                 selectedCourseId: courseViewModel.selectedCourseId,
                 onCourseSelected: { course in
@@ -165,7 +163,7 @@ struct CourseSelectionView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(GolfTheme.textSecondary)
                 
-                TextField("Search courses...", text: $searchText)
+                TextField("Search clubs or courses...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(GolfTheme.bodyFont)
                     .autocorrectionDisabled()
@@ -254,50 +252,46 @@ struct CourseSelectionView: View {
     }
     
     // MARK: - Courses List Section
-    
+
     private var coursesListSection: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: 0) {
                     if courseViewModel.searchState == .loading || courseViewModel.nearbyCoursesState == .loading {
-                        // Loading shimmer cards
                         ForEach(0..<3, id: \.self) { _ in
                             CourseCardShimmer()
                                 .padding(.horizontal)
+                                .padding(.vertical, 4)
                         }
                     } else {
-                        // Display filtered courses
-                        if filteredCourses.isEmpty {
+                        let clubs = filteredClubs
+                        if clubs.isEmpty {
                             emptyStateView
                         } else {
-                            ForEach(filteredCourses) { course in
-                                CourseRow(
-                                    course: course,
-                                    searchQuery: searchText.isEmpty ? nil : searchText,
-                                    distance: courseViewModel.distanceString(for: course),
-                                    isSelected: course.id == courseViewModel.selectedCourseId,
-                                    action: {
+                            ForEach(clubs) { club in
+                                ClubSection(
+                                    club: club,
+                                    distance: courseViewModel.distanceString(for: club.courses[0]),
+                                    selectedCourseId: courseViewModel.selectedCourseId,
+                                    onSelect: { course in
                                         selectCourse(course)
                                     }
                                 )
-                                .id(course.id)
+                                .id(club.id)
                                 .padding(.horizontal)
-                                .transition(.scale(scale: 0.95).combined(with: .opacity))
+                                .padding(.vertical, 4)
                             }
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: filteredCourses.map { $0.id })
                         }
                     }
                 }
                 .padding(.vertical, 8)
             }
             .refreshable {
-                // Pull to refresh
                 if let coordinate = locationService.coordinate {
                     await courseViewModel.fetchNearbyCourses(at: coordinate)
-                } else if locationService.authorizationStatus == .authorizedWhenInUse || 
+                } else if locationService.authorizationStatus == .authorizedWhenInUse ||
                           locationService.authorizationStatus == .authorizedAlways {
                     locationService.startUpdating()
-                    // Wait for location
                     var attempts = 0
                     while locationService.coordinate == nil && attempts < 6 {
                         try? await Task.sleep(nanoseconds: 500_000_000)
@@ -313,7 +307,6 @@ struct CourseSelectionView: View {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         proxy.scrollTo(courseId, anchor: .center)
                     }
-                    // Clear after scrolling
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         scrollToCourseId = nil
                     }
@@ -469,6 +462,244 @@ struct CourseSelectionView: View {
     }
 }
 
+// MARK: - Club Section (3-level hierarchy: Club → Course → Tee)
+
+struct ClubSection: View {
+    let club: GolfClub
+    let distance: String?
+    let selectedCourseId: String?
+    let onSelect: (Course) -> Void
+
+    @State private var isExpanded = false
+
+    private var hasSingleCourse: Bool { club.courses.count == 1 }
+    private var singleCourseHasNoTees: Bool {
+        hasSingleCourse && (club.courses[0].tees ?? []).isEmpty
+    }
+    private var singleCourseNoLabel: Bool {
+        hasSingleCourse && club.courses[0].courseLabel == nil
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // MARK: Club header
+            Button {
+                if singleCourseHasNoTees {
+                    onSelect(club.courses[0])
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        isExpanded.toggle()
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(GolfTheme.grassGreen.opacity(hasSelection ? 0.2 : 0.1))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: hasSelection ? "checkmark.circle.fill" : "flag.fill")
+                            .foregroundColor(hasSelection ? GolfTheme.grassGreen : GolfTheme.textSecondary)
+                            .font(.system(size: 18))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(club.name)
+                            .font(GolfTheme.headlineFont)
+                            .foregroundColor(GolfTheme.textPrimary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+
+                        HStack(spacing: 10) {
+                            if !hasSingleCourse {
+                                Text("\(club.courses.count) courses")
+                                    .font(GolfTheme.captionFont)
+                                    .foregroundColor(GolfTheme.textSecondary)
+                            }
+
+                            if let distance = distance {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location.fill")
+                                        .font(.system(size: 10))
+                                    Text(distance)
+                                        .font(GolfTheme.captionFont)
+                                }
+                                .foregroundColor(GolfTheme.grassGreen)
+                            }
+                        }
+                    }
+
+                    Spacer()
+
+                    if singleCourseHasNoTees {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(GolfTheme.textSecondary)
+                            .font(.system(size: 14, weight: .semibold))
+                    } else {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .foregroundColor(GolfTheme.textSecondary)
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                }
+                .padding()
+            }
+            .buttonStyle(.plain)
+
+            // MARK: Expanded course + tee list
+            if isExpanded {
+                VStack(spacing: 0) {
+                    if singleCourseNoLabel {
+                        teesOnlyRow(club.courses[0])
+                    } else {
+                        ForEach(club.courses) { course in
+                            courseRow(course)
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(hasSelection ? GolfTheme.grassGreen.opacity(0.06) : Color.white)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(hasSelection ? GolfTheme.grassGreen : Color.clear, lineWidth: 2)
+        )
+        .shadow(color: Color.black.opacity(hasSelection ? 0.1 : 0.05), radius: hasSelection ? 6 : 4, x: 0, y: 2)
+        .onAppear {
+            if hasSelection { isExpanded = true }
+        }
+    }
+
+    // MARK: - Tees-only row (single merged course, no distinct course name)
+    @ViewBuilder
+    private func teesOnlyRow(_ course: Course) -> some View {
+        let isSelected = course.id == selectedCourseId
+        let courseTees = course.tees ?? []
+
+        Button {
+            onSelect(course)
+        } label: {
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(GolfTheme.grassGreen.opacity(0.3))
+                    .frame(width: 2)
+                    .padding(.leading, 20)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if let par = course.par {
+                        Text("Par \(par)")
+                            .font(GolfTheme.captionFont)
+                            .foregroundColor(GolfTheme.textSecondary)
+                    }
+                    ForEach(courseTees) { tee in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(GolfTheme.grassGreen.opacity(0.4))
+                                .frame(width: 6, height: 6)
+                            Text(tee.name)
+                                .font(GolfTheme.captionFont)
+                                .foregroundColor(GolfTheme.textPrimary)
+                            if let yds = tee.yardage, yds > 0 {
+                                Text("\(yds) yds")
+                                    .font(GolfTheme.captionFont)
+                                    .foregroundColor(GolfTheme.textSecondary)
+                            }
+                        }
+                    }
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(GolfTheme.grassGreen)
+                        .font(.system(size: 18))
+                }
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal)
+            .background(isSelected ? GolfTheme.grassGreen.opacity(0.08) : Color.clear)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Course row (level 2)
+    @ViewBuilder
+    private func courseRow(_ course: Course) -> some View {
+        let isSelected = course.id == selectedCourseId
+        let courseTees = course.tees ?? []
+
+        Button {
+            onSelect(course)
+        } label: {
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(GolfTheme.grassGreen.opacity(0.3))
+                    .frame(width: 2)
+                    .padding(.leading, 20)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(course.courseLabel ?? course.displayName)
+                        .font(GolfTheme.bodyFont)
+                        .foregroundColor(GolfTheme.textPrimary)
+
+                    HStack(spacing: 10) {
+                        if let par = course.par {
+                            Text("Par \(par)")
+                                .font(GolfTheme.captionFont)
+                                .foregroundColor(GolfTheme.textSecondary)
+                        }
+                        if let info = course.holeAndTeeLabel {
+                            Text(info)
+                                .font(GolfTheme.captionFont)
+                                .foregroundColor(GolfTheme.textSecondary)
+                        }
+                    }
+
+                    // Level 3: Tees inline
+                    if !courseTees.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(courseTees) { tee in
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(GolfTheme.grassGreen.opacity(0.4))
+                                        .frame(width: 6, height: 6)
+                                    Text(tee.name)
+                                        .font(GolfTheme.captionFont)
+                                        .foregroundColor(GolfTheme.textPrimary)
+                                    if let yds = tee.yardage, yds > 0 {
+                                        Text("\(yds) yds")
+                                            .font(GolfTheme.captionFont)
+                                            .foregroundColor(GolfTheme.textSecondary)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(GolfTheme.grassGreen)
+                        .font(.system(size: 18))
+                }
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal)
+            .background(isSelected ? GolfTheme.grassGreen.opacity(0.08) : Color.clear)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var hasSelection: Bool {
+        guard let sel = selectedCourseId else { return false }
+        return club.courses.contains { $0.id == sel }
+    }
+}
+
 // MARK: - Course Row with Highlighting
 
 struct CourseRow: View {
@@ -481,25 +712,30 @@ struct CourseRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    // Course name with highlighting
+                VStack(alignment: .leading, spacing: 4) {
                     if let searchQuery = searchQuery, !searchQuery.isEmpty {
-                        Text(highlightedText(course.name, query: searchQuery))
+                        Text(highlightedText(course.displayName, query: searchQuery))
                             .font(GolfTheme.headlineFont)
                             .foregroundColor(GolfTheme.textPrimary)
                     } else {
-                        Text(course.name)
+                        Text(course.displayName)
                             .font(GolfTheme.headlineFont)
                             .foregroundColor(GolfTheme.textPrimary)
                     }
-                    
+
+                    if let label = course.courseLabel {
+                        Text(label)
+                            .font(GolfTheme.captionFont)
+                            .foregroundColor(GolfTheme.textSecondary)
+                    }
+
                     HStack(spacing: 12) {
                         if let par = course.par {
                             Text("Par \(par)")
                                 .font(GolfTheme.captionFont)
                                 .foregroundColor(GolfTheme.textSecondary)
                         }
-                        
+
                         if let distance = distance {
                             HStack(spacing: 4) {
                                 Image(systemName: "location.fill")
@@ -511,9 +747,9 @@ struct CourseRow: View {
                         }
                     }
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .foregroundColor(GolfTheme.textSecondary)
                     .font(.system(size: 14, weight: .semibold))

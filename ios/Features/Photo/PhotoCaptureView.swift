@@ -53,7 +53,7 @@ struct PhotoCaptureView: View {
                 VStack(spacing: 24) {
                     // Header
                     VStack(spacing: 8) {
-                        Text(course.name)
+                        Text(course.displayName)
                             .font(GolfTheme.titleFont)
                             .foregroundColor(GolfTheme.textPrimary)
                         Text("Hole \(holeNumber) • \(shotType.displayName)")
@@ -773,7 +773,7 @@ struct PhotoCaptureView: View {
             return path
         }
         // Use APIService as single source of truth for base URL
-        return APIService.baseURLString + path
+        return APIConfig.baseURLString + path
     }
     
     // MARK: - Fallback Recommendation Helpers

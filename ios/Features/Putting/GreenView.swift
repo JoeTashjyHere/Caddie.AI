@@ -27,7 +27,7 @@ struct GreenView: View {
                 VStack(spacing: 24) {
                     // Header
                     VStack(spacing: 8) {
-                        Text(course.name)
+                        Text(course.displayName)
                             .font(GolfTheme.titleFont)
                             .foregroundColor(GolfTheme.textPrimary)
                         Text("Hole \(holeNumber) • Putting Analysis")

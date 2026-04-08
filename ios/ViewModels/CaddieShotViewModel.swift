@@ -157,21 +157,25 @@ final class CaddieShotViewModel: ObservableObject {
         shouldStoreRetrySnapshot: Bool = true
     ) async {
         guard !requestState.isSubmitting else { return }
-        guard let photo = currentPhoto else {
+        let needsPhoto = !draft.quickModeNoPhoto
+        if needsPhoto, currentPhoto == nil {
             failRequest("Take a photo to continue", debugId: correlationId)
             return
         }
 
         let courseName = draft.courseName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let city = draft.city?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let state = draft.state?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCourseId = draft.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard draft.isRoundBackedContext, !trimmedCourseId.isEmpty else {
+            print("[CADDIE] Blocked recommendation — missing courseId")
+            failRequest("Course data not available. Please restart the round or reselect a course.", debugId: correlationId)
+            return
+        }
 
         guard let validCourseName = courseName, !validCourseName.isEmpty,
-              let validCity = city, !validCity.isEmpty,
-              let validState = state, !validState.isEmpty,
               let holeNumber = draft.holeNumber, (1...18).contains(holeNumber),
               let distance = draft.distanceYards, distance > 0 else {
-            failRequest("Complete course, city/state, hole, and distance before requesting.", debugId: correlationId)
+            failRequest("Complete course, hole, and distance before requesting.", debugId: correlationId)
             return
         }
 
@@ -191,8 +195,8 @@ final class CaddieShotViewModel: ObservableObject {
             do {
                 if let selectedCourse = draft.course {
                     currentCourse = selectedCourse
-                } else if currentCourse == nil {
-                    currentCourse = Course(id: "manual-\(validCourseName)", name: validCourseName)
+                } else {
+                    currentCourse = Course(id: trimmedCourseId, name: validCourseName, par: draft.course?.par)
                 }
                 currentHoleNumber = holeNumber
                 saveSession()
@@ -208,22 +212,31 @@ final class CaddieShotViewModel: ObservableObject {
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
                 lastShotContext = ctx
 
+                #if DEBUG
+                assert(!trimmedCourseId.isEmpty, "[ANALYTICS] Missing courseId in recommendationRequested")
+                #endif
+                AnalyticsService.shared.track(
+                    event: .recommendationRequested(courseId: trimmedCourseId, holeNumber: holeNumber, shotType: "full", hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext)
+                )
+
                 let hazards = parseHazards(draft.hazards)
-                let recommendation = try await requestFullShotRecommendation(
+                let recommendation = try await requestDecisionEngineRecommendation(
                     profile: profile,
                     context: ctx,
-                    photo: photo,
-                    course: currentCourse,
-                    courseName: validCourseName,
-                    city: validCity,
-                    state: validState,
-                    holeNumber: holeNumber,
-                    shotType: draft.shotType.displayName,
+                    photo: currentPhoto,
                     hazards: hazards,
+                    holePar: draft.holePar,
+                    holeHandicap: nil,
                     correlationId: correlationId
                 )
 
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
+
+                let elapsedMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                let remainingMs = max(0, 350 - elapsedMs)
+                if remainingMs > 0 {
+                    try? await Task.sleep(nanoseconds: UInt64(remainingMs) * 1_000_000)
+                }
                 recommendationResult = .fullShot(recommendation)
                 let recommendationId = UUID().uuidString
                 lastRecommendationId = recommendationId
@@ -237,8 +250,6 @@ final class CaddieShotViewModel: ObservableObject {
                     holeNumber: holeNumber,
                     hazards: hazards
                 )
-                completeSuccess()
-
                 let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
                 RecommenderService.shared.setLastDiagnosticsRequestDuration(durationMs)
                 sendShotRecommendationEvent(
@@ -260,9 +271,14 @@ final class CaddieShotViewModel: ObservableObject {
                     durationMs: durationMs,
                     errorMessage: nil
                 )
+                AnalyticsService.shared.track(
+                    event: .recommendationCompleted(courseId: trimmedCourseId, holeNumber: holeNumber, shotType: "full", hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext, responseTimeMs: durationMs, confidence: recommendation.caddieStructured?.confidence)
+                )
+                completeSuccess()
             } catch {
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
                 let message = normalizeErrorMessage(error)
+                AnalyticsService.shared.track(event: .recommendationError(courseId: trimmedCourseId, holeNumber: holeNumber, shotType: "full", hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext, errorMessage: message))
                 failRequest(message, debugId: correlationId)
                 let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
                 trackRecommendationEvent(
@@ -288,8 +304,11 @@ final class CaddieShotViewModel: ObservableObject {
         shouldStoreRetrySnapshot: Bool = true
     ) async {
         guard !requestState.isSubmitting else { return }
-        guard currentPhoto != nil else {
-            failRequest("Take a photo to continue", debugId: correlationId)
+
+        let tid = draft?.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let draft = draft, draft.isRoundBackedContext, !tid.isEmpty else {
+            print("[CADDIE] Blocked recommendation — missing courseId")
+            failRequest("Course data not available. Please restart the round or reselect a course.", debugId: correlationId)
             return
         }
 
@@ -307,26 +326,37 @@ final class CaddieShotViewModel: ObservableObject {
         inFlightTask = Task { [weak self] in
             guard let self else { return }
             do {
-                if let draftCourse = draft?.course {
+                if let draftCourse = draft.course {
                     currentCourse = draftCourse
+                } else if let cid = draft.courseId?.trimmingCharacters(in: .whitespacesAndNewlines), !cid.isEmpty,
+                          let name = draft.courseName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+                    currentCourse = Course(id: cid, name: name, par: draft.course?.par)
                 }
-                if let draftHole = draft?.holeNumber {
+                if let draftHole = draft.holeNumber {
                     currentHoleNumber = draftHole
                 }
 
-                let contextDistance = draft?.distanceYards ?? 0
+                let contextDistance = draft.distanceYards ?? 0
                 let ctx = try await buildShotContext(
                     distance: contextDistance,
                     lieType: "Green",
-                    holeNumber: draft?.holeNumber ?? currentHoleNumber,
-                    course: draft?.course ?? currentCourse
+                    holeNumber: draft.holeNumber ?? currentHoleNumber,
+                    course: draft.course ?? currentCourse
                 )
 
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
                 lastShotContext = ctx
 
-                let puttingRead = try await requestPuttingRead(profile: profile, context: ctx, correlationId: correlationId)
+                AnalyticsService.shared.track(event: .puttingRequested(courseId: tid, holeNumber: draft.holeNumber ?? currentHoleNumber, hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext))
+
+                let puttingRead = try await requestPuttingRead(profile: profile, context: ctx, correlationId: correlationId, draft: draft)
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
+
+                let elapsedMsPutt = Int(Date().timeIntervalSince(startedAt) * 1000)
+                let remainingPuttMs = max(0, 350 - elapsedMsPutt)
+                if remainingPuttMs > 0 {
+                    try? await Task.sleep(nanoseconds: UInt64(remainingPuttMs) * 1_000_000)
+                }
 
                 recommendationResult = .putt(puttingRead)
                 let recommendationId = UUID().uuidString
@@ -335,8 +365,8 @@ final class CaddieShotViewModel: ObservableObject {
                 savePuttingReadToHistory(
                     puttingRead,
                     recommendationId: recommendationId,
-                    courseName: draft?.courseName ?? currentCourse?.name,
-                    holeNumber: draft?.holeNumber ?? currentHoleNumber
+                    courseName: draft.courseName ?? currentCourse?.name,
+                    holeNumber: draft.holeNumber ?? currentHoleNumber
                 )
                 completeSuccess()
 
@@ -357,9 +387,11 @@ final class CaddieShotViewModel: ObservableObject {
                     durationMs: durationMs,
                     errorMessage: nil
                 )
+                AnalyticsService.shared.track(event: .puttingCompleted(courseId: tid, holeNumber: draft.holeNumber ?? currentHoleNumber, hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext, responseTimeMs: durationMs))
             } catch {
                 guard activeRequestID == requestID, !Task.isCancelled else { return }
                 let message = normalizeErrorMessage(error)
+                AnalyticsService.shared.track(event: .recommendationError(courseId: tid, holeNumber: draft.holeNumber ?? currentHoleNumber, shotType: "putt", hasPhoto: currentPhoto != nil, isRoundBacked: draft.isRoundBackedContext, errorMessage: message))
                 failRequest(message, debugId: correlationId)
                 let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
                 trackRecommendationEvent(
@@ -387,8 +419,15 @@ final class CaddieShotViewModel: ObservableObject {
             failRequest("Add a photo and distance to continue", debugId: UUID().uuidString)
             return
         }
+        let cid = currentCourse?.id.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !cid.isEmpty else {
+            print("[CADDIE] Blocked recommendation — missing courseId")
+            failRequest("Course data not available. Please restart the round or reselect a course.", debugId: UUID().uuidString)
+            return
+        }
         
         beginSubmitting()
+        let flowStarted = Date()
         
         defer { isLoading = false }
         
@@ -405,7 +444,8 @@ final class CaddieShotViewModel: ObservableObject {
             
             // 3. Route to putting or full-shot pipeline
             if classification.isPutt {
-                let puttingRead = try await requestPuttingRead(profile: profile, context: ctx, correlationId: UUID().uuidString)
+                AnalyticsService.shared.track(event: .puttingRequested(courseId: cid, holeNumber: currentHoleNumber, hasPhoto: true, isRoundBacked: false))
+                let puttingRead = try await requestPuttingRead(profile: profile, context: ctx, correlationId: UUID().uuidString, draft: nil)
                 recommendationResult = .putt(puttingRead)
                 let recommendationId = UUID().uuidString
                 lastRecommendationId = recommendationId
@@ -416,19 +456,20 @@ final class CaddieShotViewModel: ObservableObject {
                     courseName: currentCourse?.name,
                     holeNumber: currentHoleNumber
                 )
+                let legacyPuttMs = Int(Date().timeIntervalSince(flowStarted) * 1000)
+                AnalyticsService.shared.track(event: .puttingCompleted(courseId: cid, holeNumber: currentHoleNumber, hasPhoto: true, isRoundBacked: false, responseTimeMs: legacyPuttMs))
                 requestState = .success
             } else {
-                let rec = try await requestFullShotRecommendation(
+                AnalyticsService.shared.track(
+                    event: .recommendationRequested(courseId: cid, holeNumber: currentHoleNumber, shotType: "full", hasPhoto: true, isRoundBacked: false)
+                )
+                let rec = try await requestDecisionEngineRecommendation(
                     profile: profile,
                     context: ctx,
                     photo: photo,
-                    course: currentCourse,
-                    courseName: currentCourse?.name,
-                    city: nil,
-                    state: nil,
-                    holeNumber: currentHoleNumber,
-                    shotType: "Approach",
                     hazards: [],
+                    holePar: nil,
+                    holeHandicap: nil,
                     correlationId: UUID().uuidString
                 )
                 recommendationResult = .fullShot(rec)
@@ -444,10 +485,15 @@ final class CaddieShotViewModel: ObservableObject {
                     holeNumber: currentHoleNumber,
                     hazards: []
                 )
+                let legacyShotMs = Int(Date().timeIntervalSince(flowStarted) * 1000)
+                AnalyticsService.shared.track(
+                    event: .recommendationCompleted(courseId: cid, holeNumber: currentHoleNumber, shotType: "full", hasPhoto: true, isRoundBacked: false, responseTimeMs: legacyShotMs, confidence: rec.caddieStructured?.confidence)
+                )
                 requestState = .success
             }
         } catch {
             let debugId = UUID().uuidString
+            AnalyticsService.shared.track(event: .recommendationError(courseId: cid, holeNumber: currentHoleNumber, shotType: "full", hasPhoto: true, isRoundBacked: false, errorMessage: error.localizedDescription))
             failRequest(error.localizedDescription, debugId: debugId)
         }
     }
@@ -530,7 +576,7 @@ final class CaddieShotViewModel: ObservableObject {
         errorMessage: String?
     ) {
         AnalyticsService.shared.track(
-            AnalyticsEvent(
+            AnalyticsPayload(
                 id: UUID().uuidString,
                 eventType: eventType,
                 timestamp: ISO8601DateFormatter().string(from: Date()),
@@ -709,7 +755,7 @@ final class CaddieShotViewModel: ObservableObject {
     private func requestFullShotRecommendation(
         profile: PlayerProfile,
         context: ShotContext,
-        photo: UIImage,
+        photo: UIImage?,
         course: Course?,
         courseName: String?,
         city: String?,
@@ -717,7 +763,10 @@ final class CaddieShotViewModel: ObservableObject {
         holeNumber: Int?,
         shotType: String,
         hazards: [String],
-        correlationId: String
+        correlationId: String,
+        courseId: String?,
+        holePar: Int?,
+        teeName: String? = nil
     ) async throws -> ShotRecommendation {
         try await recommender.getRecommendation(
             profile: profile,
@@ -731,6 +780,31 @@ final class CaddieShotViewModel: ObservableObject {
             holeNumber: holeNumber,
             shotType: shotType,
             historyStore: historyStore,
+            correlationId: correlationId,
+            courseId: courseId,
+            holePar: holePar,
+            teeName: teeName
+        )
+    }
+
+    /// Decision-engine-powered recommendation path. Runs deterministic club selection,
+    /// target, and miss logic first, then asks the LLM only for natural language phrasing.
+    private func requestDecisionEngineRecommendation(
+        profile: PlayerProfile,
+        context: ShotContext,
+        photo: UIImage?,
+        hazards: [String],
+        holePar: Int?,
+        holeHandicap: Int?,
+        correlationId: String
+    ) async throws -> ShotRecommendation {
+        try await recommender.getDecisionPoweredRecommendation(
+            profile: profile,
+            context: context,
+            hazards: hazards,
+            holePar: holePar,
+            holeHandicap: holeHandicap,
+            photo: photo,
             correlationId: correlationId
         )
     }
@@ -751,30 +825,57 @@ final class CaddieShotViewModel: ObservableObject {
     private func requestPuttingRead(
         profile: PlayerProfile,
         context: ShotContext,
-        correlationId: String
+        correlationId: String,
+        draft: CaddieContextDraft?
     ) async throws -> PuttingRead {
+        let hasPhoto = currentPhoto != nil
+
+        // No-photo path: use PuttingContext → APIService.analyzePuttingText
+        if !hasPhoto {
+            guard let puttCtx = draft.flatMap({ PuttingContext(from: $0) }) ?? buildPuttingContextFallback(draft: draft) else {
+                throw NSError(domain: "CaddieShotViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "Course context required for putting analysis"])
+            }
+            #if DEBUG
+            print("[PUTT] No-photo path — courseId=\(puttCtx.courseId) distFt=\(puttCtx.distanceFeet)")
+            #endif
+            return try await APIService.shared.analyzePuttingText(context: puttCtx, correlationId: correlationId)
+        }
+
+        // Photo path: try multipart API first, then vision fallback
         let puttingVM = PuttingViewModel()
-        
+        var apiContext: [String: String?] = [:]
+        if let holeNum = currentHoleNumber {
+            apiContext["holeNumber"] = String(holeNum)
+        }
+        if let p = draft?.holePar {
+            apiContext["par"] = String(p)
+        }
+        if let d = draft?.distanceYards {
+            apiContext["distanceYards"] = String(Int(d.rounded()))
+        }
+        if let cid = draft?.courseId, !cid.isEmpty {
+            apiContext["courseId"] = cid
+        }
+
         if let course = currentCourse,
            let holeNum = currentHoleNumber,
-           let imageData = currentPhoto?.jpegData(compressionQuality: 0.8),
-           let coord = locationService.coordinate {
+           let imageData = currentPhoto?.jpegData(compressionQuality: 0.8) {
             await puttingVM.analyzePutting(
                 imageData: imageData,
                 courseId: course.id,
                 holeNumber: holeNum,
-                lat: coord.latitude,
-                lon: coord.longitude,
+                lat: locationService.coordinate?.latitude,
+                lon: locationService.coordinate?.longitude,
+                context: apiContext,
                 correlationId: correlationId
             )
             if let read = puttingVM.puttingRead { return read }
         }
-        
-        // Fallback: vision-based putting read
+
         guard let image = currentPhoto else {
             throw NSError(domain: "CaddieShotViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "No photo for putting analysis"])
         }
-        
+
         let historicalLearning: PuttHistoricalLearning?
         if let historyStore = historyStore {
             let historyItems = await MainActor.run { historyStore.items }
@@ -785,32 +886,50 @@ final class CaddieShotViewModel: ObservableObject {
         }
 
         let (systemPrompt, userPrompt) = CaddiePromptBuilder.shared.buildGreenReaderPrompt(
-            courseName: currentCourse?.name,
-            city: nil,
-            state: nil,
-            holeNumber: currentHoleNumber,
+            courseName: draft?.courseName ?? currentCourse?.name,
+            city: draft?.city,
+            state: draft?.state,
+            holeNumber: draft?.holeNumber ?? currentHoleNumber,
             puttDistance: nil,
             playerProfile: PlayerProfileData(from: profile),
             historicalLearning: historicalLearning,
-            environmentalContext: context
+            environmentalContext: context,
+            courseId: draft?.courseId,
+            holePar: draft?.holePar,
+            distanceToGreenYards: draft?.distanceYards,
+            expectsPhoto: true
         )
-        
+
         let jsonString = try await OpenAIClient.shared.completeWithVision(
             system: systemPrompt,
             user: userPrompt,
             image: image,
             correlationId: correlationId
         )
-        
+
         let cleaned = stripMarkdownCodeFences(jsonString)
         guard let data = cleaned.data(using: .utf8) else {
             throw NSError(domain: "CaddieShotViewModel", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to parse putting read"])
         }
-        
+
         if let structured = try? JSONDecoder().decode(StructuredPuttingRead.self, from: data) {
             return PuttingRead(from: structured)
         }
         return try JSONDecoder().decode(PuttingRead.self, from: data)
+    }
+
+    private func buildPuttingContextFallback(draft: CaddieContextDraft?) -> PuttingContext? {
+        let cid = draft?.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? currentCourse?.id ?? ""
+        let name = draft?.courseName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? currentCourse?.name ?? ""
+        guard !cid.isEmpty, !name.isEmpty else { return nil }
+        let distFeet = (draft?.distanceYards ?? 0) * 3
+        return PuttingContext(
+            courseId: cid,
+            courseName: name,
+            holeNumber: draft?.holeNumber ?? currentHoleNumber,
+            distanceFeet: distFeet,
+            holePar: draft?.holePar
+        )
     }
     
     private func stripMarkdownCodeFences(_ text: String) -> String {
@@ -1025,7 +1144,14 @@ final class CaddieShotViewModel: ObservableObject {
     private func loadSession() {
         if let d = UserDefaults.standard.data(forKey: "CaddieShotCourse"),
            let c = try? JSONDecoder().decode(Course.self, from: d) {
-            currentCourse = c
+            if c.hasValidBackendId {
+                currentCourse = c
+            } else {
+                #if DEBUG
+                print("[COURSE] Invalid cached courseId detected, clearing: \(c.id)")
+                #endif
+                UserDefaults.standard.removeObject(forKey: "CaddieShotCourse")
+            }
         }
         currentHoleNumber = UserDefaults.standard.object(forKey: "CaddieShotHole") as? Int
     }
