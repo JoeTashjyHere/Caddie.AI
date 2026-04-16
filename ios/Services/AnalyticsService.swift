@@ -10,18 +10,43 @@ import Foundation
 // MARK: - Product events (console)
 
 enum AnalyticsEvent {
+    // Onboarding
+    case onboardingStarted
+    case onboardingCompleted(provider: String)
+
+    // Auth
+    case authCompleted(provider: String)
+    case authFailed(provider: String, error: String)
+
+    // App lifecycle
+    case appOpened
+    case sessionStarted(sessionId: String)
+
+    // Rounds
     case roundStarted(courseId: String, roundLength: String, isRoundBacked: Bool)
     case roundCompleted(courseId: String, totalScore: Int, vsPar: Int)
 
+    // Recommendations
     case recommendationRequested(courseId: String, holeNumber: Int?, shotType: String, hasPhoto: Bool, isRoundBacked: Bool)
     case recommendationCompleted(courseId: String, holeNumber: Int?, shotType: String, hasPhoto: Bool, isRoundBacked: Bool, responseTimeMs: Int, confidence: String?)
     case recommendationError(courseId: String?, holeNumber: Int?, shotType: String, hasPhoto: Bool, isRoundBacked: Bool, errorMessage: String)
 
+    // Putting
     case puttingRequested(courseId: String, holeNumber: Int?, hasPhoto: Bool, isRoundBacked: Bool)
     case puttingCompleted(courseId: String, holeNumber: Int?, hasPhoto: Bool, isRoundBacked: Bool, responseTimeMs: Int)
 
+    // Profile
+    case profileEdited(field: String)
+    case clubEdited(clubType: String, action: String)
+
     var eventName: String {
         switch self {
+        case .onboardingStarted: return "onboarding_started"
+        case .onboardingCompleted: return "onboarding_completed"
+        case .authCompleted: return "auth_completed"
+        case .authFailed: return "auth_failed"
+        case .appOpened: return "app_opened"
+        case .sessionStarted: return "session_started"
         case .roundStarted: return "roundStarted"
         case .roundCompleted: return "roundCompleted"
         case .recommendationRequested: return "recommendationRequested"
@@ -29,11 +54,29 @@ enum AnalyticsEvent {
         case .recommendationError: return "recommendationError"
         case .puttingRequested: return "puttingRequested"
         case .puttingCompleted: return "puttingCompleted"
+        case .profileEdited: return "profile_edited"
+        case .clubEdited: return "club_edited"
         }
     }
 
     var properties: [String: Any] {
         switch self {
+        case .onboardingStarted:
+            return [:]
+        case .onboardingCompleted(let provider):
+            return ["provider": provider]
+        case .authCompleted(let provider):
+            return ["provider": provider]
+        case .authFailed(let provider, let error):
+            return ["provider": provider, "error": error]
+        case .appOpened:
+            return [:]
+        case .sessionStarted(let sessionId):
+            return ["sessionId": sessionId]
+        case .profileEdited(let field):
+            return ["field": field]
+        case .clubEdited(let clubType, let action):
+            return ["clubType": clubType, "action": action]
         case .roundStarted(let courseId, let roundLength, let isRoundBacked):
             return ["courseId": courseId, "roundLength": roundLength, "isRoundBacked": isRoundBacked]
         case .roundCompleted(let courseId, let totalScore, let vsPar):

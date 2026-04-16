@@ -9,27 +9,71 @@ import Foundation
 import CoreLocation
 import Combine
 
-// MARK: - Hole Geometry (POI-based, from coordinates.csv)
+// MARK: - Per-Tee Coordinate (from golf_hole_tees)
 
-/// Full spatial geometry for a hole: structured tee and green POIs.
+/// GPS coordinate for a specific tee set on a specific hole.
+struct HoleTeeCoordinate: Equatable {
+    let teeSetId: String
+    let teeName: String
+    let coordinate: CLLocationCoordinate2D
+    let yardage: Int
+    let isSynthesized: Bool
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.teeSetId == rhs.teeSetId &&
+        lhs.coordinate.latitude == rhs.coordinate.latitude &&
+        lhs.coordinate.longitude == rhs.coordinate.longitude
+    }
+}
+
+// MARK: - Hole Geometry
+
+/// Full spatial geometry for a hole, including per-tee positions.
 /// Separation of responsibilities — geometry defines the hole corridor;
 /// user location is never used here.
 struct HoleGeometry: Equatable {
+    // Legacy generic tee POIs (backward compat)
     let teeFront: CLLocationCoordinate2D?
     let teeBack: CLLocationCoordinate2D?
     let greenFront: CLLocationCoordinate2D?
-    let greenCenter: CLLocationCoordinate2D   // always present when geometry exists
+    let greenCenter: CLLocationCoordinate2D
     let greenBack: CLLocationCoordinate2D?
+    /// Per-tee-set coordinates (from golf_hole_tees)
+    let holeTees: [HoleTeeCoordinate]
 
-    /// Priority: Tee Front → Tee Back → synthetic offset from green.
-    var selectedTee: CLLocationCoordinate2D {
+    /// Returns the coordinate for a specific tee set, or the best available fallback.
+    func teeCoordinate(forTeeSetId teeSetId: String?) -> CLLocationCoordinate2D {
+        if let id = teeSetId,
+           let match = holeTees.first(where: { $0.teeSetId == id }) {
+            return match.coordinate
+        }
+        if let first = holeTees.first {
+            return first.coordinate
+        }
         if let t = teeFront { return t }
         if let t = teeBack  { return t }
         return syntheticTee()
     }
 
-    /// Fallback tee: project ~320 yards (293 m) due north of greenCenter.
-    /// Only used when no real tee data exists.
+    /// Source label for debugging.
+    func teeSource(forTeeSetId teeSetId: String?) -> String {
+        if let id = teeSetId,
+           let match = holeTees.first(where: { $0.teeSetId == id }) {
+            return match.isSynthesized ? "holeTee(\(match.teeName),synth)" : "holeTee(\(match.teeName),real)"
+        }
+        if let first = holeTees.first {
+            return first.isSynthesized ? "holeTee(\(first.teeName),synth)" : "holeTee(\(first.teeName),real)"
+        }
+        if teeFront != nil { return "legacyTeeFront" }
+        if teeBack  != nil { return "legacyTeeBack" }
+        return "synthetic"
+    }
+
+    /// Legacy accessor — prefer teeCoordinate(forTeeSetId:) for tee-specific resolution.
+    var selectedTee: CLLocationCoordinate2D {
+        teeCoordinate(forTeeSetId: nil)
+    }
+
     private func syntheticTee() -> CLLocationCoordinate2D {
         let offsetMeters = 293.0
         return CLLocationCoordinate2D(
@@ -41,10 +85,24 @@ struct HoleGeometry: Equatable {
     static func == (lhs: HoleGeometry, rhs: HoleGeometry) -> Bool {
         lhs.greenCenter.latitude  == rhs.greenCenter.latitude  &&
         lhs.greenCenter.longitude == rhs.greenCenter.longitude &&
+        lhs.holeTees == rhs.holeTees &&
         lhs.teeFront?.latitude    == rhs.teeFront?.latitude    &&
-        lhs.teeFront?.longitude   == rhs.teeFront?.longitude   &&
-        lhs.teeBack?.latitude     == rhs.teeBack?.latitude     &&
-        lhs.teeBack?.longitude    == rhs.teeBack?.longitude
+        lhs.teeFront?.longitude   == rhs.teeFront?.longitude
+    }
+}
+
+// MARK: - Raw Hazard POI (for tee-relative computation)
+
+struct HazardPoi: Equatable {
+    let type: String
+    let locationLabel: String?
+    let fairwaySide: String?
+    let coordinate: CLLocationCoordinate2D
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.type == rhs.type &&
+        lhs.coordinate.latitude == rhs.coordinate.latitude &&
+        lhs.coordinate.longitude == rhs.coordinate.longitude
     }
 }
 
@@ -58,9 +116,11 @@ struct HoleData: Equatable {
     let greenCenter: CLLocationCoordinate2D?
     /// Full POI geometry when available from backend. Drives all camera and orientation logic.
     let geometry: HoleGeometry?
+    /// Text hazard descriptions (for display / caddie prompt).
     let hazards: [String]
+    /// Raw hazard POIs with coordinates (for tee-relative computation).
+    let hazardPois: [HazardPoi]
 
-    /// Human-readable hazard descriptions for the caddie prompt.
     var hazardDescriptions: [String] { hazards }
 
     static func == (lhs: HoleData, rhs: HoleData) -> Bool {
@@ -81,6 +141,8 @@ struct TeeData: Equatable, Identifiable {
     let id: String
     let name: String
     let totalYards: Int
+    let slope: Int?
+    let courseRating: Double?
 }
 
 struct DistanceSnapshot: Equatable {
@@ -202,41 +264,98 @@ final class ActiveRoundContext: ObservableObject {
             slopeRating = dto.course.slopeRating
 
             holes = dto.holes.map { h in
+                // Green center: prefer nested green object, then flat field
+                let resolvedGC = h.resolvedGreenCenter
                 let gc: CLLocationCoordinate2D?
-                if let lat = h.greenCenter?.lat, let lon = h.greenCenter?.lon {
-                    gc = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                if let coord = resolvedGC {
+                    gc = CLLocationCoordinate2D(latitude: coord.lat, longitude: coord.lon)
                 } else {
                     gc = nil
                 }
 
-                // Build full POI geometry when we have at least a green center.
-                let geometry: HoleGeometry? = gc.map { center in
-                    HoleGeometry(
-                        teeFront:    h.teeFront.map    { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) },
-                        teeBack:     h.teeBack.map     { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) },
-                        greenFront:  h.greenFront.map  { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) },
-                        greenCenter: center,
-                        greenBack:   h.greenBack.map   { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                let teeFrontCoord   = h.teeFront.map  { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                let teeBackCoord    = h.teeBack.map   { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                let greenFrontCoord = h.resolvedGreenFront.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                let greenBackCoord  = h.resolvedGreenBack.map  { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+
+                // Per-tee coordinates from golf_hole_tees
+                let holeTees: [HoleTeeCoordinate] = (h.tees ?? []).map { t in
+                    HoleTeeCoordinate(
+                        teeSetId: t.teeSetId,
+                        teeName: t.teeName,
+                        coordinate: CLLocationCoordinate2D(latitude: t.coordinate.lat, longitude: t.coordinate.lon),
+                        yardage: t.yardage,
+                        isSynthesized: t.isSynthesized ?? true
                     )
                 }
 
+                let geometry: HoleGeometry? = gc.map { center in
+                    HoleGeometry(
+                        teeFront:    teeFrontCoord,
+                        teeBack:     teeBackCoord,
+                        greenFront:  greenFrontCoord,
+                        greenCenter: center,
+                        greenBack:   greenBackCoord,
+                        holeTees:    holeTees
+                    )
+                }
+
+                // Raw hazard POIs
+                let hazardPoiModels: [HazardPoi] = (h.hazardPois ?? []).map { hp in
+                    HazardPoi(
+                        type: hp.type,
+                        locationLabel: hp.locationLabel,
+                        fairwaySide: hp.fairwaySide,
+                        coordinate: CLLocationCoordinate2D(latitude: hp.lat, longitude: hp.lon)
+                    )
+                }
+
+                #if DEBUG
+                let teeSource: String
+                if !holeTees.isEmpty {
+                    let synth = holeTees.allSatisfy { $0.isSynthesized }
+                    teeSource = "✅ \(holeTees.count) tees\(synth ? " (synth)" : " (real)")"
+                } else if teeFrontCoord != nil || teeBackCoord != nil {
+                    teeSource = "⚠️ LEGACY POI"
+                } else {
+                    teeSource = "❌ SYNTHETIC"
+                }
+                print("[HOLE GEOMETRY] Hole \(h.holeNumber): green=\(gc != nil ? "✅" : "❌") tee=\(teeSource)")
+                if holeTees.isEmpty && teeFrontCoord == nil && teeBackCoord == nil {
+                    print("[ALIGNMENT HEALTH] ⚠️ Hole \(h.holeNumber): NO TEE DATA — map will use due-north fallback bearing")
+                }
+                #endif
+
                 return HoleData(
-                    holeNumber: h.holeNumber,
-                    par:        h.par,
-                    handicap:   h.handicap,
+                    holeNumber:  h.holeNumber,
+                    par:         h.par,
+                    handicap:    h.handicap,
                     greenCenter: gc,
-                    geometry:   geometry,
-                    hazards:    h.hazards ?? []
+                    geometry:    geometry,
+                    hazards:     h.hazards ?? [],
+                    hazardPois:  hazardPoiModels
                 )
             }
 
-            tees = dto.tees.map { TeeData(id: $0.id, name: $0.name, totalYards: $0.totalYards) }
+            tees = dto.tees.map { TeeData(id: $0.id, name: $0.name, totalYards: $0.totalYards, slope: $0.slope, courseRating: $0.courseRating) }
 
             if let tid = launch?.selectedTeeId, let match = tees.first(where: { $0.id == tid }) {
                 selectedTee = match
             } else if selectedTee == nil || tees.first(where: { $0.id == selectedTee?.id }) == nil {
                 selectedTee = tees.first
             }
+
+            #if DEBUG
+            print("[TEE SELECTION] Selected tee: \(selectedTee?.name ?? "nil") id: \(selectedTee?.id ?? "nil")")
+            print("[TEE SELECTION] Available tees: \(tees.map { "\($0.name)(\($0.id.prefix(8)))" }.joined(separator: ", "))")
+            for h in holes {
+                guard let geom = h.geometry else { continue }
+                let matchCount = geom.holeTees.filter { $0.teeSetId == selectedTee?.id }.count
+                if matchCount == 0 && !geom.holeTees.isEmpty {
+                    print("[TEE SELECTION] ⚠️ Hole \(h.holeNumber): selectedTee id NOT in holeTees — will fallback")
+                }
+            }
+            #endif
 
             let range = activeHoleRange
             let startHole: Int
@@ -304,8 +423,14 @@ final class ActiveRoundContext: ObservableObject {
     /// Update yardages from user location to current hole's green (live).
     func updateDistances(user: CLLocationCoordinate2D) {
         guard let hole = hole(for: currentHole) else { return }
+        // Prefer full geometry snapshot (includes front/back) when available
+        if let snap = DistanceEngine.distanceSnapshot(user: user, geometry: hole.geometry) {
+            distances = snap
+            print("[DIST] Updated — \(Int(round(snap.center))) yds (front: \(snap.front.map { "\(Int(round($0)))" } ?? "-") back: \(snap.back.map { "\(Int(round($0)))" } ?? "-"))")
+            return
+        }
         guard let snap = DistanceEngine.distanceSnapshotToGreenCenter(user: user, greenCenter: hole.greenCenter) else { return }
         distances = snap
-        print("[DIST] Updated — \(Int(round(snap.center))) yds")
+        print("[DIST] Updated — \(Int(round(snap.center))) yds (center only)")
     }
 }

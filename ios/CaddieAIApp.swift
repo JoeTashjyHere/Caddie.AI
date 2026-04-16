@@ -16,8 +16,9 @@ struct CaddieAIApp: App {
     @StateObject private var userProfileStore = UserProfileStore()
     @StateObject private var userIdentityStore = UserIdentityStore()
     @StateObject private var sessionStore = SessionStore()
+    @StateObject private var authService = AuthService.shared
     @StateObject private var recommendationDiagnosticsStore = RecommendationDiagnosticsStore.shared
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -30,9 +31,12 @@ struct CaddieAIApp: App {
                 .environmentObject(userProfileStore)
                 .environmentObject(userIdentityStore)
                 .environmentObject(sessionStore)
+                .environmentObject(authService)
                 .environmentObject(recommendationDiagnosticsStore)
                 .onAppear {
                     AnalyticsService.shared.refreshSession()
+                    AnalyticsService.shared.track(event: .appOpened)
+                    AnalyticsService.shared.track(event: .sessionStarted(sessionId: sessionStore.currentSessionId))
                     profileViewModel.applyUserProfile(userProfileStore.profile)
                 }
                 .onChange(of: userProfileStore.profile) { _, newValue in

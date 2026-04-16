@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var showingResetConfirmation = false
     @State private var showingAddClubSheet = false
     @State private var pendingDeleteIndex: Int?
+    @State private var showingAdminDashboard = false
 
     @State private var newClubType: ClubType = .driver
     @State private var newClubDistance: Int = 150
@@ -34,20 +35,20 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     profileHeader
-                    bagSection
                     snapshotSection
+                    bagSection
                     playerProfileSection
+                    preferencesSection
                     riskSection
                     puttingSection
-                    preferencesSection
                     accountSection
                     developerSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                .padding(.bottom, 24)
+                .padding(.bottom, 32)
             }
             .background(GolfTheme.screenBackground.ignoresSafeArea())
             .navigationTitle("Profile")
@@ -58,6 +59,7 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $showingAddClubSheet) { addClubSheet }
+            .sheet(isPresented: $showingAdminDashboard) { AdminDashboardView() }
             .confirmationDialog("Remove this club?", isPresented: Binding(
                 get: { pendingDeleteIndex != nil },
                 set: { if !$0 { pendingDeleteIndex = nil } }
@@ -65,7 +67,12 @@ struct ProfileView: View {
                 Button("Remove", role: .destructive) {
                     if let idx = pendingDeleteIndex,
                        idx < userProfileStore.profile.clubDistances.count {
+                        let club = userProfileStore.profile.clubDistances[idx]
                         userProfileStore.profile.clubDistances.remove(at: idx)
+                        AnalyticsService.shared.track(event: .clubEdited(
+                            clubType: club.clubType.displayName,
+                            action: "removed"
+                        ))
                     }
                     pendingDeleteIndex = nil
                 }
@@ -85,7 +92,10 @@ struct ProfileView: View {
             } message: {
                 Text("This clears setup answers and shows onboarding again.")
             }
-            .onAppear { viewModel.applyUserProfile(userProfileStore.profile) }
+            .onAppear {
+                viewModel.applyUserProfile(userProfileStore.profile)
+                userProfileStore.profile.lastActiveAt = Date()
+            }
             .onChange(of: userProfileStore.profile) { _, _ in
                 userProfileStore.save()
                 viewModel.applyUserProfile(userProfileStore.profile)
@@ -114,45 +124,113 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(displayFirstName)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         CaddieWordmark()
-                            .scaleEffect(0.6, anchor: .leading)
-                            .frame(height: 16)
-                        Text("Member")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .scaleEffect(0.55, anchor: .leading)
+                            .frame(height: 14)
+                        if let provider = userProfileStore.profile.authProvider, !provider.isEmpty {
+                            Text("via \(provider.capitalized)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 Spacer()
             }
-
-            HStack(spacing: 0) {
-                statPill(value: "\(userProfileStore.profile.clubDistances.count)", label: "Clubs")
-                Divider().frame(height: 28)
-                statPill(value: userProfileStore.profile.averageScore ?? "—", label: "Avg Score")
-                Divider().frame(height: 28)
-                statPill(value: yearsSummary, label: "Experience")
-            }
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6).opacity(0.6))
-            .cornerRadius(12)
         }
         .padding(20)
         .background(Color.white)
-        .cornerRadius(18)
-        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 5)
     }
 
-    private func statPill(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
+    // MARK: - Snapshot (most prominent)
+
+    private var snapshotSection: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 0) {
+                statPill(
+                    value: userProfileStore.profile.averageScore ?? "—",
+                    label: "Avg Score",
+                    icon: "target",
+                    color: GolfTheme.accentBlue
+                )
+                Divider().frame(height: 36)
+                statPill(
+                    value: estimatedHandicap,
+                    label: "Est. HCP",
+                    icon: "number",
+                    color: GolfTheme.grassGreen
+                )
+                Divider().frame(height: 36)
+                statPill(
+                    value: "\(userProfileStore.profile.clubDistances.count)",
+                    label: "Clubs",
+                    icon: "bag.fill",
+                    color: .purple
+                )
+                Divider().frame(height: 36)
+                statPill(
+                    value: yearsSummary,
+                    label: "Experience",
+                    icon: "clock.fill",
+                    color: .orange
+                )
+            }
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
+
+            ProfileSectionCard(title: "Golf Snapshot") {
+                SnapshotDropdownField(
+                    label: "Average Score",
+                    options: averageScoreOptions,
+                    selection: optionalBinding(for: \.averageScore)
+                )
+                SnapshotDropdownField(
+                    label: "Years Playing",
+                    options: yearsPlayingOptions,
+                    selection: yearsPlayingBinding
+                )
+                cardTextField("Golf Goal", text: optionalBinding(for: \.golfGoal), axis: .vertical)
+                    .lineLimit(2...4)
+                    .focused($focusedField, equals: .golfGoal)
+                profilePickerRow("Seriousness",
+                                 selection: optionalBinding(for: \.seriousness),
+                                 options: [("Not set", ""), ("Casual", "Casual"),
+                                           ("Committed", "Committed"), ("Obsessed", "Obsessed")])
+            }
+        }
+    }
+
+    private func statPill(value: String, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(color)
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(GolfTheme.accentBlue)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var estimatedHandicap: String {
+        guard let scoreStr = userProfileStore.profile.averageScore else { return "—" }
+        switch scoreStr {
+        case "Under 70": return "+2"
+        case "70–79": return "5"
+        case "80–89": return "12"
+        case "90–99": return "20"
+        case "100–109": return "28"
+        case "110–119": return "34"
+        case "120+": return "40+"
+        default: return "—"
+        }
     }
 
     private var yearsSummary: String {
@@ -168,6 +246,7 @@ struct ProfileView: View {
             title: "My Bag",
             trailing: AnyView(
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     newClubType = availableClubTypes.first ?? .driver
                     newClubDistance = 150
                     newShotPreference = .straight
@@ -193,37 +272,13 @@ struct ProfileView: View {
                 ForEach(Array(userProfileStore.profile.clubDistances.indices), id: \.self) { index in
                     EditableClubCard(
                         club: $userProfileStore.profile.clubDistances[index],
-                        onDelete: { pendingDeleteIndex = index }
+                        onDelete: {
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            pendingDeleteIndex = index
+                        }
                     )
                 }
             }
-        }
-    }
-
-    // MARK: - Snapshot
-
-    private var snapshotSection: some View {
-        ProfileSectionCard(title: "Golf Snapshot") {
-            SnapshotDropdownField(
-                label: "Average Score",
-                options: averageScoreOptions,
-                selection: optionalBinding(for: \.averageScore)
-            )
-
-            SnapshotDropdownField(
-                label: "Years Playing",
-                options: yearsPlayingOptions,
-                selection: yearsPlayingBinding
-            )
-
-            cardTextField("Golf Goal", text: optionalBinding(for: \.golfGoal), axis: .vertical)
-                .lineLimit(2...4)
-                .focused($focusedField, equals: .golfGoal)
-
-            profilePickerRow("Seriousness",
-                             selection: optionalBinding(for: \.seriousness),
-                             options: [("Not set", ""), ("Casual", "Casual"),
-                                       ("Committed", "Committed"), ("Obsessed", "Obsessed")])
         }
     }
 
@@ -243,6 +298,22 @@ struct ProfileView: View {
                              selection: optionalBinding(for: \.strategyType),
                              options: [("Not set", ""), ("Aggressive", "Aggressive"),
                                        ("Balanced", "Balanced"), ("Conservative", "Conservative")])
+        }
+    }
+
+    // MARK: - Preferences
+
+    private var preferencesSection: some View {
+        ProfileSectionCard(title: "Preferences") {
+            profilePickerRow("Distance",
+                             selection: optionalBinding(for: \.distanceUnit),
+                             options: [("Imperial", "Imperial"), ("Metric", "Metric")])
+            profilePickerRow("Temperature",
+                             selection: optionalBinding(for: \.temperatureUnit),
+                             options: [("Fahrenheit", "Fahrenheit"), ("Celsius", "Celsius")])
+            profilePickerRow("Handedness",
+                             selection: optionalBinding(for: \.handedness),
+                             options: [("Right", "Right"), ("Left", "Left")])
         }
     }
 
@@ -279,22 +350,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Preferences
-
-    private var preferencesSection: some View {
-        ProfileSectionCard(title: "Preferences") {
-            profilePickerRow("Distance",
-                             selection: optionalBinding(for: \.distanceUnit),
-                             options: [("Imperial", "Imperial"), ("Metric", "Metric")])
-            profilePickerRow("Temperature",
-                             selection: optionalBinding(for: \.temperatureUnit),
-                             options: [("Fahrenheit", "Fahrenheit"), ("Celsius", "Celsius")])
-            profilePickerRow("Handedness",
-                             selection: optionalBinding(for: \.handedness),
-                             options: [("Right", "Right"), ("Left", "Left")])
-        }
-    }
-
     // MARK: - Account
 
     private var accountSection: some View {
@@ -310,6 +365,20 @@ struct ProfileView: View {
                 .focused($focusedField, equals: .email)
             cardTextField("Phone", text: optionalBinding(for: \.phone), keyboard: .phonePad)
                 .focused($focusedField, equals: .phone)
+
+            if AuthService.shared.state == .authenticated,
+               let provider = AuthService.shared.currentUser?.provider {
+                HStack {
+                    Text("Signed in via")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(provider.rawValue.capitalized)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(GolfTheme.accentBlue)
+                }
+                .padding(.top, 4)
+            }
         }
     }
 
@@ -317,10 +386,23 @@ struct ProfileView: View {
 
     private var developerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Button("Command Center") {
+                showingAdminDashboard = true
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(GolfTheme.accentBlue)
+
             Button("Reset Onboarding", role: .destructive) {
                 showingResetConfirmation = true
             }
             .font(.system(size: 14, weight: .medium))
+
+            if AuthService.shared.state == .authenticated {
+                Button("Sign Out", role: .destructive) {
+                    AuthService.shared.signOut()
+                }
+                .font(.system(size: 14, weight: .medium))
+            }
 
             #if DEBUG
             NavigationLink("Recommendation Diagnostics") {
@@ -366,6 +448,7 @@ struct ProfileView: View {
                 return ""
             },
             set: { val in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 switch val {
                 case "< 1 year": userProfileStore.profile.yearsPlaying = 0
                 case "1–3 years": userProfileStore.profile.yearsPlaying = 2
@@ -403,6 +486,9 @@ struct ProfileView: View {
             }
             .labelsHidden()
             .tint(GolfTheme.accentBlue)
+            .onChange(of: selection.wrappedValue) { _, _ in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
         }
         .padding(.vertical, 2)
     }
@@ -474,6 +560,11 @@ struct ProfileView: View {
                                 notes: newClubNotes.isEmpty ? nil : newClubNotes
                             )
                         )
+                        AnalyticsService.shared.track(event: .clubEdited(
+                            clubType: newClubType.displayName,
+                            action: "added"
+                        ))
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
                         focusedField = nil
                         showingAddClubSheet = false
                     }

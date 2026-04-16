@@ -45,6 +45,11 @@
 		A1B2C3D4E5F60789ABCD3024 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4041 /* PrimaryButton.swift */; };
 		A1B2C3D4E5F60789ABCD3025 /* GolfTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4042 /* GolfTheme.swift */; };
 		B1C2D3E4F5A60789ABCD9001 /* BrandedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A60789ABCD9002 /* BrandedComponents.swift */; };
+		C1D2E3F4A5B60789ABCD0001 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B60789ABCD0002 /* AuthService.swift */; };
+		C1D2E3F4A5B60789ABCD0003 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B60789ABCD0004 /* KeychainService.swift */; };
+		C1D2E3F4A5B60789ABCD0005 /* AdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B60789ABCD0006 /* AdService.swift */; };
+		C1D2E3F4A5B60789ABCD0007 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B60789ABCD0008 /* SubscriptionService.swift */; };
+		C1D2E3F4A5B60789ABCD0009 /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B60789ABCD000A /* AdminDashboardView.swift */; };
 		A1B2C3D4E5F60789ABCD3026 /* RoundViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4050 /* RoundViewModel.swift */; };
 		A1B2C3D4E5F60789ABCD3027 /* PuttingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4051 /* PuttingViewModel.swift */; };
 		A1B2C3D4E5F60789ABCD3028 /* CourseIntelligenceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60789ABCD4052 /* CourseIntelligenceViewModel.swift */; };
@@ -98,6 +103,7 @@
 		E4B7C5F42F041F3F00A8D62A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E4B7C5F32F041F3F00A8D62A /* Assets.xcassets */; };
 		E4B7C6132F041F3F00A8D62A /* DistanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B7C6022F041F3F00A8D62A /* DistanceEngine.swift */; };
 		E4B7C6142F041F3F00A8D62A /* LocationSmoothing.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B7C6032F041F3F00A8D62A /* LocationSmoothing.swift */; };
+		AA1122330001000100110011 /* HazardEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1122330001000100110022 /* HazardEngine.swift */; };
 		E4B7C61B2F041F3F00A8D62A /* ActiveRoundContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B7C61C2F041F3F00A8D62A /* ActiveRoundContext.swift */; };
 		E4B7C61D2F041F3F00A8D62A /* HoleDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B7C61E2F041F3F00A8D62A /* HoleDetectionEngine.swift */; };
 		E4B7C6252F041F3F00A8D62A /* RoundPlaySetupSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B7C6232F041F3F00A8D62A /* RoundPlaySetupSheet.swift */; };
@@ -167,6 +173,11 @@
 		A1B2C3D4E5F60789ABCD4041 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60789ABCD4042 /* GolfTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfTheme.swift; sourceTree = "<group>"; };
 		B1C2D3E4F5A60789ABCD9002 /* BrandedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandedComponents.swift; sourceTree = "<group>"; };
+		C1D2E3F4A5B60789ABCD0002 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		C1D2E3F4A5B60789ABCD0004 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		C1D2E3F4A5B60789ABCD0006 /* AdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdService.swift; sourceTree = "<group>"; };
+		C1D2E3F4A5B60789ABCD0008 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
+		C1D2E3F4A5B60789ABCD000A /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60789ABCD4043 /* Caddie_aiTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie_aiTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60789ABCD4044 /* Caddie_aiUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Caddie_aiUITests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60789ABCD4047 /* AILogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AILogger.swift; sourceTree = "<group>"; };
@@ -219,6 +230,7 @@
 		E4B7C5F32F041F3F00A8D62A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E4B7C6022F041F3F00A8D62A /* DistanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistanceEngine.swift; sourceTree = "<group>"; };
 		E4B7C6032F041F3F00A8D62A /* LocationSmoothing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSmoothing.swift; sourceTree = "<group>"; };
+		AA1122330001000100110022 /* HazardEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HazardEngine.swift; sourceTree = "<group>"; };
 		E4B7C61C2F041F3F00A8D62A /* ActiveRoundContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveRoundContext.swift; sourceTree = "<group>"; };
 		E4B7C61E2F041F3F00A8D62A /* HoleDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleDetectionEngine.swift; sourceTree = "<group>"; };
 		E4B7C6232F041F3F00A8D62A /* RoundPlaySetupSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundPlaySetupSheet.swift; sourceTree = "<group>"; };
@@ -322,6 +334,7 @@
 				A1B2C3D4E5F60789ABCD0019 /* Putting */,
 				A1B2C3D4E5F60789ABCD001A /* Caddie */,
 				A1B2C3D4E5F60789ABCD001B /* History */,
+				C1D2E3F4A5B60789ABCD0010 /* Admin */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -373,8 +386,13 @@
 				A1B2C3D4E5F60789ABCD4073 /* AIContextBuilder.swift */,
 				A1B2C3D4E5F60789ABCD4075 /* LieClassificationService.swift */,
 				E4B7C6022F041F3F00A8D62A /* DistanceEngine.swift */,
+				AA1122330001000100110022 /* HazardEngine.swift */,
 				E4B7C61E2F041F3F00A8D62A /* HoleDetectionEngine.swift */,
 				E4B7C6032F041F3F00A8D62A /* LocationSmoothing.swift */,
+				C1D2E3F4A5B60789ABCD0002 /* AuthService.swift */,
+				C1D2E3F4A5B60789ABCD0004 /* KeychainService.swift */,
+				C1D2E3F4A5B60789ABCD0006 /* AdService.swift */,
+				C1D2E3F4A5B60789ABCD0008 /* SubscriptionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -526,6 +544,14 @@
 				A1B2C3D4E5F60789ABCD4070 /* HistoryDetailView.swift */,
 			);
 			path = History;
+			sourceTree = "<group>";
+		};
+		C1D2E3F4A5B60789ABCD0010 /* Admin */ = {
+			isa = PBXGroup;
+			children = (
+				C1D2E3F4A5B60789ABCD000A /* AdminDashboardView.swift */,
+			);
+			path = Admin;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -713,6 +739,11 @@
 				A1B2C3D4E5F60789ABCD3024 /* PrimaryButton.swift in Sources */,
 				A1B2C3D4E5F60789ABCD3025 /* GolfTheme.swift in Sources */,
 				B1C2D3E4F5A60789ABCD9001 /* BrandedComponents.swift in Sources */,
+				C1D2E3F4A5B60789ABCD0001 /* AuthService.swift in Sources */,
+				C1D2E3F4A5B60789ABCD0003 /* KeychainService.swift in Sources */,
+				C1D2E3F4A5B60789ABCD0005 /* AdService.swift in Sources */,
+				C1D2E3F4A5B60789ABCD0007 /* SubscriptionService.swift in Sources */,
+				C1D2E3F4A5B60789ABCD0009 /* AdminDashboardView.swift in Sources */,
 				A1B2C3D4E5F60789ABCD3026 /* RoundViewModel.swift in Sources */,
 				A1B2C3D4E5F60789ABCD3027 /* PuttingViewModel.swift in Sources */,
 				A1B2C3D4E5F60789ABCD3028 /* CourseIntelligenceViewModel.swift in Sources */,
@@ -750,6 +781,7 @@
 				A1B2C3D4E5F60789ABCD3054 /* CaddieShotViewModel.swift in Sources */,
 				A1B2C3D4E5F60789ABCD3055 /* CaddieRecommendationOverlay.swift in Sources */,
 				E4B7C6132F041F3F00A8D62A /* DistanceEngine.swift in Sources */,
+				AA1122330001000100110011 /* HazardEngine.swift in Sources */,
 				E4B7C6142F041F3F00A8D62A /* LocationSmoothing.swift in Sources */,
 				E4B7C61B2F041F3F00A8D62A /* ActiveRoundContext.swift in Sources */,
 				E4B7C61D2F041F3F00A8D62A /* HoleDetectionEngine.swift in Sources */,

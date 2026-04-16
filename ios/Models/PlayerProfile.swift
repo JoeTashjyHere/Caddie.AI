@@ -94,6 +94,10 @@ struct UserProfile: Codable, Equatable {
     var courseType: String?
     var windSensitivity: String?
 
+    var authProvider: String?
+    var createdAt: Date?
+    var lastActiveAt: Date?
+
     init(
         firstName: String = "",
         lastName: String? = nil,
@@ -116,7 +120,10 @@ struct UserProfile: Codable, Equatable {
         shotShape: String? = nil,
         strategyType: String? = nil,
         courseType: String? = nil,
-        windSensitivity: String? = nil
+        windSensitivity: String? = nil,
+        authProvider: String? = nil,
+        createdAt: Date? = nil,
+        lastActiveAt: Date? = nil
     ) {
         self.firstName = firstName
         self.lastName = lastName
@@ -140,5 +147,8 @@ struct UserProfile: Codable, Equatable {
         self.strategyType = strategyType
         self.courseType = courseType
         self.windSensitivity = windSensitivity
+        self.authProvider = authProvider
+        self.createdAt = createdAt
+        self.lastActiveAt = lastActiveAt
     }
 }

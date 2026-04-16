@@ -115,7 +115,7 @@ struct RoundPlaySetupSheet: View {
 
         do {
             let dto = try await APIService.shared.fetchCourseContext(courseId: course.id)
-            tees = dto.tees.map { TeeData(id: $0.id, name: $0.name, totalYards: $0.totalYards) }
+            tees = dto.tees.map { TeeData(id: $0.id, name: $0.name, totalYards: $0.totalYards, slope: $0.slope, courseRating: $0.courseRating) }
             if selectedTeeId == nil {
                 selectedTeeId = tees.first?.id
             }

@@ -59,4 +59,26 @@ enum DistanceEngine {
         let c = yards(from: u, to: g)
         return DistanceSnapshot(front: nil, center: c, back: nil)
     }
+
+    /// Full distance snapshot using geometry POIs when available.
+    static func distanceSnapshot(
+        user: CLLocationCoordinate2D?,
+        geometry: HoleGeometry?
+    ) -> DistanceSnapshot? {
+        guard let u = user, let geom = geometry else { return nil }
+        let center = yards(from: u, to: geom.greenCenter)
+        let front  = geom.greenFront.map { yards(from: u, to: $0) }
+        let back   = geom.greenBack.map  { yards(from: u, to: $0) }
+        return DistanceSnapshot(front: front, center: center, back: back)
+    }
+
+    /// Compass bearing in degrees from one coordinate to another (0=N, 90=E, 180=S, 270=W).
+    static func bearingDegrees(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let lat1 = from.latitude  * .pi / 180
+        let lat2 = to.latitude    * .pi / 180
+        let dLon = (to.longitude - from.longitude) * .pi / 180
+        let y    = sin(dLon) * cos(lat2)
+        let x    = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        return (atan2(y, x) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+    }
 }

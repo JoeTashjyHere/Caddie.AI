@@ -148,29 +148,90 @@ class APIService: ObservableObject {
     /// Legacy alias kept so existing callsites compile unchanged.
     typealias CourseContextGreenCenterDTO = CourseContextCoordDTO
 
+    /// Per-tee coordinate for a specific hole (from golf_hole_tees)
+    struct HoleTeeDTO: Decodable {
+        let teeSetId: String
+        let teeName: String
+        let coordinate: CourseContextCoordDTO
+        let yardage: Int
+        let isSynthesized: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case teeSetId    = "tee_set_id"
+            case teeName     = "tee_name"
+            case coordinate
+            case yardage
+            case isSynthesized = "is_synthesized"
+        }
+    }
+
+    /// Nested green geometry
+    struct GreenDTO: Decodable {
+        let center: CourseContextCoordDTO?
+        let front: CourseContextCoordDTO?
+        let back: CourseContextCoordDTO?
+    }
+
+    /// Raw hazard POI with coordinates for tee-relative computation
+    struct HazardPoiDTO: Decodable {
+        let type: String
+        let locationLabel: String?
+        let fairwaySide: String?
+        let lat: Double
+        let lon: Double
+
+        enum CodingKeys: String, CodingKey {
+            case type
+            case locationLabel = "location_label"
+            case fairwaySide   = "fairway_side"
+            case lat, lon
+        }
+    }
+
     struct CourseContextHoleDTO: Decodable {
         let holeNumber: Int
         let par: Int
         let handicap: Int?
-        // Green POIs
+        // Nested green geometry (new structure)
+        let green: GreenDTO?
+        // Per-tee coordinates (from golf_hole_tees)
+        let tees: [HoleTeeDTO]?
+        // Backward-compat flat green fields
         let greenCenter: CourseContextCoordDTO?
         let greenFront: CourseContextCoordDTO?
         let greenBack: CourseContextCoordDTO?
-        // Tee POIs — populated from coordinates.csv entries "Tee Front" / "Tee Back"
+        // Legacy tee POIs (backward compat fallback)
         let teeFront: CourseContextCoordDTO?
         let teeBack: CourseContextCoordDTO?
+        // Raw hazard POIs with coordinates
+        let hazardPois: [HazardPoiDTO]?
+        // Legacy text hazard descriptions
         let hazards: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case holeNumber = "hole_number"
+            case holeNumber  = "hole_number"
             case par
             case handicap
+            case green
+            case tees
             case greenCenter = "green_center"
             case greenFront  = "green_front"
             case greenBack   = "green_back"
             case teeFront    = "tee_front"
             case teeBack     = "tee_back"
+            case hazardPois  = "hazard_pois"
             case hazards
+        }
+
+        /// Resolved green center: prefers nested green.center, falls back to flat field
+        var resolvedGreenCenter: CourseContextCoordDTO? {
+            green?.center ?? greenCenter
+        }
+        var resolvedGreenFront: CourseContextCoordDTO? {
+            green?.front ?? greenFront
+        }
+        var resolvedGreenBack: CourseContextCoordDTO? {
+            green?.back ?? greenBack
         }
     }
     
@@ -178,11 +239,15 @@ class APIService: ObservableObject {
         let id: String
         let name: String
         let totalYards: Int
+        let slope: Int?
+        let courseRating: Double?
         
         enum CodingKeys: String, CodingKey {
             case id
             case name
             case totalYards = "total_yards"
+            case slope
+            case courseRating = "course_rating"
         }
     }
     

@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UIKit
+import AuthenticationServices
 
 // MARK: - Bag Entry
 
@@ -195,7 +196,18 @@ struct OnboardingCoordinatorView: View {
         userProfileStore.profile.temperatureUnit = temperatureUnit
         userProfileStore.profile.handedness = handedness
         userProfileStore.profile.clubDistances = clubs
+
+        if let authUser = AuthService.shared.currentUser {
+            userProfileStore.profile.email = authUser.email ?? userProfileStore.profile.email
+            userProfileStore.profile.authProvider = authUser.provider.rawValue
+            userProfileStore.profile.createdAt = authUser.createdAt
+            userProfileStore.profile.lastActiveAt = authUser.lastActiveAt
+        }
+
         userProfileStore.save()
+        AnalyticsService.shared.track(event: .onboardingCompleted(
+            provider: AuthService.shared.currentUser?.provider.rawValue ?? "anonymous"
+        ))
     }
 }
 
@@ -253,6 +265,7 @@ private struct OnboardingSignUpScreen: View {
     var onContinue: () -> Void
     var onBack: () -> Void
     @State private var showNameInput = false
+    @State private var authInProgress = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -286,17 +299,38 @@ private struct OnboardingSignUpScreen: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showNameInput)
+        .allowsHitTesting(!authInProgress)
     }
 
     private var authSection: some View {
         VStack(spacing: 14) {
-            BrandedAuthButton(type: .apple) { withAnimation { showNameInput = true } }
-            BrandedAuthButton(type: .google) { withAnimation { showNameInput = true } }
+            BrandedAuthButton(type: .apple) {
+                authInProgress = true
+                AuthService.shared.signInWithApple { success in
+                    authInProgress = false
+                    if success, let user = AuthService.shared.currentUser {
+                        firstName = user.firstName ?? ""
+                        if !firstName.isEmpty {
+                            onContinue()
+                        } else {
+                            withAnimation { showNameInput = true }
+                        }
+                    } else {
+                        withAnimation { showNameInput = true }
+                    }
+                }
+            }
+
+            BrandedAuthButton(type: .google) {
+                withAnimation { showNameInput = true }
+            }
 
             LabeledDivider(label: "Or You Can")
                 .padding(.vertical, 4)
 
-            BrandedAuthButton(type: .email) { withAnimation { showNameInput = true } }
+            BrandedAuthButton(type: .email) {
+                withAnimation { showNameInput = true }
+            }
 
             (Text("By signing up, you agree to our ") +
              Text("Terms of Service").foregroundColor(GolfTheme.accentBlue) +

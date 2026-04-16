@@ -149,3 +149,6 @@ venv/
 *.swp
 *.swo
 
+
+# Temporary deploy-recovery clone workdir
+.deploy-workspace/

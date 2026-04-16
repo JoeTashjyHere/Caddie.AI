@@ -362,7 +362,8 @@ struct RoundPlayView: View {
             RoundMapView(
                 holeNumber: activeRoundContext.currentHole,
                 holeData: currentHoleData,
-                userCoordinate: mapDebouncedUserCoordinate
+                userCoordinate: mapDebouncedUserCoordinate,
+                selectedTeeSetId: activeRoundContext.selectedTee?.id
             )
 
             VStack(spacing: 0) {

@@ -362,6 +362,26 @@ struct EditableClubCard: View {
     private var expandedContent: some View {
         VStack(spacing: 14) {
             HStack {
+                Text("Club Type")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Picker("Type", selection: Binding(
+                    get: { club.clubType },
+                    set: {
+                        club.clubType = $0
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                )) {
+                    ForEach(ClubType.allCases) { ct in
+                        Text(ct.displayName).tag(ct)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(GolfTheme.accentBlue)
+            }
+
+            HStack {
                 Text("Distance")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
